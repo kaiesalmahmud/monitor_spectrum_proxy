@@ -127,9 +127,6 @@ if ($?) {
     # Still here? Bad.
     fatal("Power cycle failed!");
 }
-if (1) {
-    exit(1);
-}
 
 #
 # Run the monitor. We capture the output and write a CSV temp file.
