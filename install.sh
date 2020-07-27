@@ -1,3 +1,4 @@
+#!/bin/sh
 #
 # Install the RF monitor and its dependencies.
 #
