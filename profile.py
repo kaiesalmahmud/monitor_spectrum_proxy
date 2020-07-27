@@ -38,7 +38,7 @@ node = request.RawPC(params.NodeID)
 node.component_id         = params.NodeID
 node.component_manager_id = params.Where
 node.disk_image           = IMAGE
-#node.addService(pg.Execute(shell="sh", command="/local/repository/monitor.pl"))
+node.addService(pg.Execute(shell="sh", command="/local/repository/monitor.pl"))
 
 # Final rspec.
 pc.printRequestRSpec(request)
