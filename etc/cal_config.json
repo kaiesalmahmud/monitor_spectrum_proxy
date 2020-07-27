@@ -1,0 +1,45 @@
+{
+    "transmitters": {
+        "incident": {
+            "id": "portable",
+            "host": "nuc2.test1.powderwireless.net",
+            "ip" : "155.98.47.68",
+            "port": "9998",
+            "sdr_serial" : "3173726",
+            "antennas": {
+                "ant_txrxA": "CouplerInc",
+                "ant_rx2A": "None",
+                "ant_txrxB": "None",
+                "ant_rx2B": "None"
+            }
+        },
+        "experimental": [
+            {
+                "id": "nuc1",
+                "host": "nuc1.test1.powderwireless.net",
+                "ip" : "155.98.47.67",
+                "port": "9999",
+                "sdr_serial" : "31554D9",
+                "antennas": {
+                    "ant_txrxA": "None",
+                    "ant_rx2A": "None",
+                    "ant_txrxB": "CouplerExp",
+                    "ant_rx2B": "None"
+                }
+            }
+        ]
+    },
+    "receiver": {
+        "id": "web_control",
+        "host" : "control.test1.powderwireless.net",    
+        "ip": "155.98.47.65",
+        "port": "9997",
+        "sdr_serial" : "3155504",
+        "antennas": {
+            "ant_txrxA": "CouplerInc",
+            "ant_rx2A": "None",
+            "ant_txrxB": "CouplerExp",
+            "ant_rx2B": "None"
+        }
+    }
+}
