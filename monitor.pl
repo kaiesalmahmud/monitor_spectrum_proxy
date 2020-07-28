@@ -40,6 +40,13 @@ my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
 
 #
+# HOME will not be defined until new images are built.
+#
+if (!defined($HOME)) {
+    $HOME = "/users/geniuser";
+}
+
+#
 # Turn off line buffering on output
 #
 $| = 1;
