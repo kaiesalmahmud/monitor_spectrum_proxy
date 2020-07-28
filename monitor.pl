@@ -137,7 +137,7 @@ if ($?) {
 # Run the monitor. We capture the output and write a CSV temp file.
 # If things go smoothly, move it to the wbstore save directory.
 #
-for (my $i = 0; $i < $LOOPS; $i++) {
+while ($LOOPS) {
     my ($fp, $filename) = tempfile(UNLINK => 0);
     if (!$fp) {
 	fatal("Could not open a temporary file");
@@ -166,8 +166,9 @@ for (my $i = 0; $i < $LOOPS; $i++) {
 	fatal("Could not gzip data into the save directory.");
     }
     unlink($filename);
-    sleep($LOOPDELAY);
-    exit(1);
+    $LOOPS--;
+    sleep($LOOPDELAY)    
+	if ($LOOPS);
 }
 exit(0);
 
