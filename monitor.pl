@@ -152,8 +152,13 @@ if ($output =~ /Operating over USB (\d+)/) {
 	if ($?) {
 	    fatal("$FIXIT failed");
 	}
+	# Need a little delay before the probe else it fails.
+	sleep(5);
 	# Have to probe it again.
 	$output = `$PROBE 2>&1`;
+	if ($?) {
+	    fatal("Could not probe after USB fix");
+	}
 	if ($output !~ /Operating over USB 3/) {
 	    fatal("Not able to fix the USB level");
 	}
