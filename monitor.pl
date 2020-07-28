@@ -94,10 +94,15 @@ chomp($domain);
 # We need the local XMLRPC cert/key in case we need to power cycle
 # to bring the B210 back online.
 #
-if (! -e "$HOME/.ssl") {
+if (! -e "$HOME/.ssl/emulab.pem") {
+    if (! -e "$HOME/.ssl") {
+	if (!mkdir("$HOME/.ssl", 0750)) {
+	    fatal("Could not mkdir $HOME/.ssl");
+	}
+    }
     system("$GENIGET rpccert > $HOME/.ssl/emulab.pem");
     if ($?) {
-	fatal("Could not geni-get out rpc cert/key");
+	fatal("Could not geni-get xmlrpc cert/key");
     }
 }
 
