@@ -30,6 +30,7 @@ my $INSTALL     = "$REPO/install.sh";
 my $MONITOR     = "/usr/bin/rfmonitor";
 my $MONITORETC  = "/etc/rfmonitor";
 my $PROBE       = "/usr/bin/uhd_usrp_probe";
+my $FIXIT       = "/usr/lib/uhd/utils/b2xx_fx3_utils -D";
 my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
 my $REBOOT      = "/usr/local/bin/node_reboot";
@@ -53,6 +54,7 @@ $| = 1;
 
 # Protos
 sub fatal($);
+sub Notify($);
 
 # For SENDMAIL
 use libtestbed;
@@ -124,10 +126,14 @@ if (!$noinstall && ! -e "$MONITORETC/.ready") {
     }
 }
 
+#
 # Probe to see if we can find the B210. If not, power cycle.
-system($PROBE);
+# We capture the output so we make sure its on USB 3 instead of 2.
+#
+my $output = `$PROBE 2>&1`;
+print $output;
 if ($?) {
-    # But only once.
+    # Power cycle, but only once.
     if (-e "$MONITORETC/.rebooted") {
 	fatal("Could not find the radio after power cycle");
     }
@@ -138,6 +144,23 @@ if ($?) {
     sleep(15);
     # Still here? Bad.
     fatal("Power cycle failed!");
+}
+if ($output =~ /Operating over USB (\d+)/) {
+    if ($1 == 2) {
+	print "Attempting to fix USB\n";
+	system($FIXIT);
+	if ($?) {
+	    fatal("$FIXIT failed");
+	}
+	# Have to probe it again.
+	$output = `$PROBE 2>&1`;
+	if ($output !~ /Operating over USB 3/) {
+	    fatal("Not able to fix the USB level");
+	}
+    }
+}
+else {
+    fatal("Could not determine which USB is being used");
 }
 
 #
@@ -177,6 +200,7 @@ while ($LOOPS) {
     sleep($LOOPDELAY)    
 	if ($LOOPS);
 }
+Notify("Worked");
 exit(0);
 
 sub Notify($)
