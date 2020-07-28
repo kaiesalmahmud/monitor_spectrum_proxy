@@ -26,7 +26,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo apt-get -y install --no-install-recommends python3-rfmonitor python3-uhd uhd-host python3-tk
+sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-uhd uhd-host python3-tk
 if [ $? -ne 0 ]; then
     echo 'apt-get install failed'
     exit 1
@@ -46,16 +46,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo cp /local/repository/etc/cal_data_ref.pkl /etc/rfmonitor
-if [ $? -ne 0 ]; then
-    echo 'Copying cal_data_ref.pkl failed'
-    exit 1
-fi
-sudo cp /local/repository/etc/cal_config.json /etc/rfmonitor
-if [ $? -ne 0 ]; then
-    echo 'Copying cal_config.json failed'
-    exit 1
-fi
+#sudo cp /local/repository/etc/cal_data_ref.pkl /etc/rfmonitor
+#if [ $? -ne 0 ]; then
+#    echo 'Copying cal_data_ref.pkl failed'
+#    exit 1
+#fi
+#sudo cp /local/repository/etc/cal_config.json /etc/rfmonitor
+#if [ $? -ne 0 ]; then
+#    echo 'Copying cal_config.json failed'
+#    exit 1
+#fi
 
 #
 # Marker that says we completed the install. In case we have to power
