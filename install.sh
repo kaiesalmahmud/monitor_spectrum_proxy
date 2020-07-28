@@ -38,9 +38,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo mkdir /etc/rfmonitor && 
-   nodeid=`cat /var/emulab/boot/nodeid` &&
-   echo "{ \"$nodeid\" : [\"rf0\"] }" | sudo tee -a /etc/rfmonitor/device_config.json
+nodeid=`cat /var/emulab/boot/nodeid` &&
+    echo "{ \"$nodeid\" : [\"rf0\"] }" | sudo tee -a /etc/rfmonitor/device_config.json
 if [ $? -ne 0 ]; then
     echo 'Creating device_config.json failed'
     exit 1
