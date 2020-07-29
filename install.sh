@@ -8,15 +8,30 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "deb http://repos.emulab.net/powder/ubuntu $(. /etc/os-release ; echo $UBUNTU_CODENAME) main" | sudo tee -a /etc/apt/sources.list.d/powder.list
+REPO="powder"
+RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
+
+# WTF! The tabs before priority actually matter.
+echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
+    echo "http://repos.emulab.net/$REPO/ubuntu	priority:2" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
+    echo "deb mirror+file:/etc/apt/emulab-$REPO-mirrorlist.txt $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/$REPO.list
 if [ $? -ne 0 ]; then
     echo 'creating powder.list failed'
     exit 1
 fi
 
-echo "deb http://repos.emulab.net/powder-endpoints/ubuntu $(. /etc/os-release ; echo $UBUNTU_CODENAME) main" | sudo tee -a /etc/apt/sources.list.d/powder-endpoints.list
+REPO="powder-endpoints"
+
+# WTF! The tabs before priority actually matter.
+echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
+    echo "http://repos.emulab.net/$REPO/ubuntu	priority:2" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
+    echo "deb mirror+file:/etc/apt/emulab-$REPO-mirrorlist.txt $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/$REPO.list
 if [ $? -ne 0 ]; then
-    echo 'creating powder-endpoint.list failed'
+    echo 'creating powder.list failed'
+    exit 1
+fi
+if [ $? -ne 0 ]; then
+    echo 'creating powder-endpoints.list failed'
     exit 1
 fi
 
