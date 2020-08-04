@@ -181,7 +181,7 @@ while ($LOOPS) {
     }
     print $fp "frequency,power\n";
     
-    if (! open(MON, "$MONITOR -o -n |")) {
+    if (! open(MON, "$MONITOR -o -n -g 85 |")) {
 	fatal("Could not start ssh-keygen");
     }
     while (<MON>) {
