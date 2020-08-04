@@ -45,6 +45,8 @@ my $HOME        = $ENV{"HOME"};
 #
 if (!defined($HOME)) {
     $HOME = "/users/geniuser";
+    $ENV{"HOME"} = $HOME;
+    $ENV{"USER"} = "geniuser";
 }
 
 #
@@ -137,7 +139,7 @@ if ($?) {
     if (-e "$MONITORETC/.rebooted") {
 	fatal("Could not find the radio after power cycle");
     }
-    system("/bin/touch $MONITORETC/.rebooted");
+    system("sudo /bin/touch $MONITORETC/.rebooted");
     system("/bin/sync");
     sleep(1);
     system("$REBOOT -s $nodeID");
