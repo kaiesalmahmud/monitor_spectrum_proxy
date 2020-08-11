@@ -54,22 +54,16 @@ if [ $? -ne 0 ]; then
 fi
 
 nodeid=`cat /var/emulab/boot/nodeid` &&
-    echo "{ \"$nodeid\" : [\"rf0\"] }" | sudo tee -a /etc/rfmonitor/device_config.json
+    echo "{ \"devices\" : [\"${nodeid}:rf0\"], \"channels\" : [\"RX2\"] }" | sudo tee -a /etc/rfmonitor/device_config.json
 if [ $? -ne 0 ]; then
     echo 'Creating device_config.json failed'
     exit 1
 fi
 
-#sudo cp /local/repository/etc/cal_data_ref.pkl /etc/rfmonitor
-#if [ $? -ne 0 ]; then
-#    echo 'Copying cal_data_ref.pkl failed'
-#    exit 1
-#fi
-#sudo cp /local/repository/etc/cal_config.json /etc/rfmonitor
-#if [ $? -ne 0 ]; then
-#    echo 'Copying cal_config.json failed'
-#    exit 1
-#fi
+# Temporary fixes.
+
+sudo cp -f /local/repository/files/device.py /usr/lib/python3/dist-packages/monitor/radio
+sudo cp -f /local/repository/files/iso_receiver.py /usr/lib/python3/dist-packages/monitor/radio
 
 #
 # Marker that says we completed the install. In case we have to power
