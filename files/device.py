@@ -80,22 +80,29 @@ class Device():
             self.usrp.set_clock_source("internal")
             print("[DEVICE] using internal reference source")
 
-        if type(channels) is list:
-            for chan in range(len(channels)):
+        if type(channels) is dict:
+            chans = [];
+            
+            for channel in channels:
+                antenna = channels[channel]
+                chan = int(channel)
+                
                 self.usrp.set_rx_rate(rate, chan)
                 self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(2400e6), chan)
                 self.usrp.set_rx_gain(gain, chan)
 
                 # set the receiver port based on the given configuration
-                self.usrp.set_rx_antenna(channels[chan], chan)
+                self.usrp.set_rx_antenna(antenna, chan)
                 
                 # Analog band width is not properly set when using two channels
                 # currently (likely a UHD bug)
                 # reduce the analog bandwidth to ~90% of the sample rate.
                 # See radio/constants.py for more details. 
                 self.usrp.set_rx_bandwidth(C.ANALOG_BW, chan)
+                chans.append(chan)
                 pass
-            self.chans = list(range(len(channels)));
+            
+            self.chans = chans
         else:
             # set to a default value to initialize the radio
             for chan in self.chans:
@@ -141,9 +148,16 @@ class Device():
         print("[DEVICE] Actual rate: {:.2f} MSps".format(self.usrp.get_rx_rate(0)/1e6))
         print("[DEVICE] Analog bandwidth set to {:.2f} MHz".format(self.usrp.get_rx_bandwidth()/1e6))
         print("[DEVICE] Keeping {} samples from FFT size {} ".format(C.N, C.FFT_SIZE))
-        print("[DEVICE] Antennas configured: RXA-{}".format(self.usrp.get_rx_antenna(0)), end='')
-        if len(self.chans) == 2:
-            print(", RXB-{}".format(self.usrp.get_rx_antenna(1)))
+        print("[DEVICE] Antennas configured: ", end='')
+        if type(channels) is dict:
+            for channel in channels:
+                antenna = channels[channel]
+                print("RF{}:{} ".format(channel, antenna), end='')
+                pass
+        else:
+            for channel in channels:
+                print("RF{}:{} ".format(channel, self.usrp.get_rx_antenna(1)), end='')
+                pass
             pass
         print("")
         print("[DEVICE] USRP radio initialized successfully")        
@@ -246,11 +260,9 @@ class Device():
 
         self.end_collect_time = time.time()
         #
-        # Ug, a lot of code just assumes two channels, so if there
-        # is just a a single channel, duplicate it. Terrible! But
-        # this code is millions of miles above my understanding
-        # (read: zip). Yes, we end up taking actuall samples from
-        # the same antenna twice, but that is just fine in my book.
+        # Ug, a lot of code just assumes two channels, so if there is
+        # just a a single channel, duplicate it. Terrible! But this
+        # code is millions of miles above my understanding (read: zip).
         #
         if len(self.chans) == 1:
             result = np.array([result[0], result[0].copy()])
