@@ -81,17 +81,6 @@ class Device():
             print("[DEVICE] using internal reference source")
 
         if type(channels) is list:
-            #
-            # Ug, a lot of code just assumes two channels, so if there
-            # is just a a single channel, duplicate it. Terrible! But
-            # this code is millions of miles above my understanding
-            # (read: zip). Yes, we end up taking actuall samples from
-            # the same antenna twice, but that is just fine in my book.
-            #
-            if len(channels) == 1:
-                channels.append(channels[0]);
-                pass
-            
             for chan in range(len(channels)):
                 self.usrp.set_rx_rate(rate, chan)
                 self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(2400e6), chan)
@@ -152,7 +141,11 @@ class Device():
         print("[DEVICE] Actual rate: {:.2f} MSps".format(self.usrp.get_rx_rate(0)/1e6))
         print("[DEVICE] Analog bandwidth set to {:.2f} MHz".format(self.usrp.get_rx_bandwidth()/1e6))
         print("[DEVICE] Keeping {} samples from FFT size {} ".format(C.N, C.FFT_SIZE))
-        print("[DEVICE] Antennas configured: RXA-{}, RXB-{}".format(self.usrp.get_rx_antenna(0), self.usrp.get_rx_antenna(1)))
+        print("[DEVICE] Antennas configured: RXA-{}".format(self.usrp.get_rx_antenna(0)), end='')
+        if len(self.chans) == 2:
+            print(", RXB-{}".format(self.usrp.get_rx_antenna(1)))
+            pass
+        print("")
         print("[DEVICE] USRP radio initialized successfully")        
         
         # handling tunes
@@ -252,6 +245,16 @@ class Device():
             prev_num_rx_samps = num_rx_samps
 
         self.end_collect_time = time.time()
+        #
+        # Ug, a lot of code just assumes two channels, so if there
+        # is just a a single channel, duplicate it. Terrible! But
+        # this code is millions of miles above my understanding
+        # (read: zip). Yes, we end up taking actuall samples from
+        # the same antenna twice, but that is just fine in my book.
+        #
+        if len(self.chans) == 1:
+            result = np.array([result[0], result[0].copy()])
+            pass
         return result
 
     def get_dft_avg(self, center_frequency, N, avg_factor):
