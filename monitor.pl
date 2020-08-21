@@ -207,7 +207,7 @@ while ($LOOPS) {
     sleep($LOOPDELAY)    
 	if ($LOOPS);
 }
-Notify("Worked");
+Notify("Worked") if ($debug);
 exit(0);
 
 sub Notify($)
@@ -220,6 +220,8 @@ sub Notify($)
 		 $mesg . "\n\n", undef,
 		 "X-Spectrum-Monitor: ${nodeID}.${domain} ",
 		 $LOGFILE);
+	# So it has time to depart before experiment termination.
+	sleep(10);
     }
 }
 
