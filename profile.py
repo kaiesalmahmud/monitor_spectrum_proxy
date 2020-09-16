@@ -7,7 +7,7 @@ import geni.rspec.pg as pg
 # Import the emulab extensions library.
 import geni.rspec.emulab
 
-IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
+IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-UHD-STD"
 ENDPOINT  = "urn:publicid:IDN+bus-test2.powderwireless.net+authority+cm"
 
 # Create a portal context.
