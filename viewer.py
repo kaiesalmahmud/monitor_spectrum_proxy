@@ -39,6 +39,8 @@ while True:
         raise
         
     print("New data received")
+    # Avoid short read on the socket.
+    client_sock.settimeout(None)
 
     data = ""
     while True:
@@ -63,6 +65,9 @@ while True:
     powers = []
     for row in reader:
         if israwdata == True:
+            if len(row) != 4:
+                print(str(row))
+                pass
             # Terminator line
             freq = float(row[2])
             power = float(row[3])
