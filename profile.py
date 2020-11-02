@@ -9,6 +9,7 @@ import geni.rspec.emulab
 
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-UHD-STD"
 ENDPOINT  = "urn:publicid:IDN+bus-test2.powderwireless.net+authority+cm"
+COMMAND   = "/local/repository/monitor.pl"
 
 # Create a portal context.
 pc = portal.Context()
@@ -21,6 +22,12 @@ pc.defineParameter("Where", "Where",
 
 pc.defineParameter("NodeID", "Node",
                    portal.ParameterType.STRING, "ed1")
+
+# Optionally viewer mode
+pc.defineParameter("Viewer", "Viewer Mode",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="Start the monitor in network mode, use " +
+                   "the viewer to see real time graph")
 
 params = pc.bindParameters()
 
@@ -38,7 +45,10 @@ node = request.RawPC(params.NodeID)
 node.component_id         = params.NodeID
 node.component_manager_id = params.Where
 node.disk_image           = IMAGE
-node.addService(pg.Execute(shell="sh", command="/local/repository/monitor.pl"))
+if params.Viewer:
+    COMMAND += " -V"
+    pass
+node.addService(pg.Execute(shell="sh", command=COMMAND))
 
 # Final rspec.
 pc.printRequestRSpec(request)

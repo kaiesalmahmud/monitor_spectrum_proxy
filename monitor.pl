@@ -17,13 +17,14 @@ BEGIN { require "/etc/emulab/paths.pm"; import emulabpaths; }
 #
 sub usage()
 {
-    print STDOUT "Usage: monitor [-d] [-n] [i]\n";
+    print STDOUT "Usage: monitor [-dniV]\n";
     exit(-1);
 }
-my $optlist     = "dni";
+my $optlist     = "dniV";
 my $impotent    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
+my $viewer      = 0;
 my $LOGFILE     = "/tmp/monitor.$$";
 my $REPO        = "/local/repository";
 my $INSTALL     = "$REPO/install.sh";
@@ -77,12 +78,15 @@ if (defined($options{"n"})) {
 if (defined($options{"i"})) {
     $noinstall = 1;
 }
+if (defined($options{"V"})) {
+    $viewer = 1;
+}
 
 #
 # Save off our output when not interactive, so that we can send it
 # someplace useful. 
 #
-if (! -t) {
+if (! -t || ($viewer && !$debug)) {
     open(STDOUT, ">> $LOGFILE") or
 	die("opening $LOGFILE for STDOUT: $!");
     open(STDERR, ">> $LOGFILE") or
@@ -168,6 +172,19 @@ if ($output =~ /Operating over USB (\d+)/) {
 }
 else {
     fatal("Could not determine which USB is being used");
+}
+
+#
+# In viewer mode, just start the monitor and exit.
+#
+if ($viewer) {
+    if (!$debug) {
+	if (TBBackGround($LOGFILE)) {
+	    exit(0);
+	}
+    }
+    system("$MONITOR -g 85 -s 127.0.0.1 -p 12237");
+    exit(0);
 }
 
 #

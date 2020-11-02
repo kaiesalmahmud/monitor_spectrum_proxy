@@ -41,7 +41,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-tk
+sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-tk python3-matplotlib socat
 if [ $? -ne 0 ]; then
     echo 'apt-get install failed'
     exit 1
