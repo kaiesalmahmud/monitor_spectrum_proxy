@@ -67,7 +67,7 @@ while True:
         if israwdata == True:
             if len(row) != 4:
                 print(str(row))
-                pass
+                continue
             # Terminator line
             freq = float(row[2])
             power = float(row[3])
