@@ -34,6 +34,7 @@ my $REPO        = "/local/repository";
 my $INSTALL     = "$REPO/install.sh";
 my $MONITOR     = "/usr/bin/rfmonitor";
 my $MONITORETC  = "/etc/rfmonitor";
+my $TAR         = "/bin/tar";
 my $FIND        = "/usr/bin/uhd_find_devices";
 my $PROBE       = "/usr/bin/uhd_usrp_probe";
 my $FIXIT       = "/usr/lib/uhd/utils/b2xx_fx3_utils -D";
@@ -124,14 +125,10 @@ if ($?) {
 chomp($domain);
 
 # We do not run wbstore on the Mothership, so these have to copied to /proj.
-if ($type ne "B210") {
-    my $nickname = `cat $BOOTDIR/nickname`;
-    chomp($nickname);
-    my (undef,$eid,$pid) = split(/\./, $nickname);
-
-    $SAVEDIR = "/proj/$pid/exp/$eid";
-    print "Changing SAVEDIR to $SAVEDIR\n";
-}
+# Need pid/eid below.
+my $nickname = `cat $BOOTDIR/nickname`;
+chomp($nickname);
+my (undef,$eid,$pid) = split(/\./, $nickname);
 
 #
 # We need the local XMLRPC cert/key in case we need to power cycle
@@ -217,12 +214,30 @@ while ($LOOPS) {
     }
     my $now  = time();
     my $name = "${ID}:rf0-${now}.csv.gz";
+    #
+    # Ick, if we are running on the Mothership, have to write the file into
+    # /proj instead of wbstore. Lets create a tar file that looks like the
+    # wbstore file and has a known name.
+    #
+    if ($domain eq "emulab.net") {
+	$SAVEDIR = "/proj/$pid/exp/$eid";
+    }
     print "Writing file to $SAVEDIR/$name\n";
-    system("/bin/cat $filename | gzip > $SAVEDIR/$name");
+    system("/bin/cat $filename | gzip > $SAVEDIR/${name}");
     if ($?) {
 	fatal("Could not gzip data into the save directory.");
     }
     unlink($filename);
+    if ($domain eq "emulab.net") {
+	system("$TAR -cf $SAVEDIR/${ID}.gz.tmp -C /proj $pid/exp/$eid/$name");
+	if ($?) {
+	    fatal("Could not create dopey tar file");
+	}
+	system("/bin/mv $SAVEDIR/${ID}.gz.tmp $SAVEDIR/${ID}.gz");
+	if ($?) {
+	    fatal("Could not move dopey tar file into place");
+	}
+    }
     $LOOPS--;
     sleep($LOOPDELAY)    
 	if ($LOOPS);
