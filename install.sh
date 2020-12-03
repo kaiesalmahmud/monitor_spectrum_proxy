@@ -72,6 +72,10 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Temporary fixes.
+sudo cp -f /local/repository/files/device.py /usr/lib/python3/dist-packages/monitor/radio
+sudo cp -f /local/repository/files/iso_receiver.py /usr/lib/python3/dist-packages/monitor/radio
+
 #
 # Marker that says we completed the install. In case we have to power
 # cycle to bring the B210 back to life.
