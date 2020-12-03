@@ -279,12 +279,16 @@ sub ProbeB210()
     #
     # Create the config file.
     #
-    open(CONFIG, "> $CONFIG") or
+    open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
     print CONFIG "{ \"devices\" : { \"${nodeID}:rf0\" : ".
 	"{\"name\" : \"${nodeID}:rf0\", ".
 	"\"channels\" : {\"0\" : \"RX2\"} } } }\n";
     close(CONFIG);
+    system("sudo /bin/cp -f /tmp/device.cnf $CONFIG");
+    if ($?) {
+	fatal("Could not copy new file to $CONFIG");
+    }
     return 0;
 }
 
@@ -347,13 +351,17 @@ sub ProbeX310()
 	$antenna = "TX/RX";
     }
     
-    open(CONFIG, "> $CONFIG") or
+    open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
     print CONFIG "{ \"is_bs\" : true, ".
 	" \"devices\" : { \"${radioID}:rf0\" : ".
 	"    {\"name\" : \"${radioID}:rf0\", ".
 	"     \"channels\" : {\"0\" : \"${antenna}\"} } } }\n";
     close(CONFIG);
+    system("sudo /bin/cp -f /tmp/device.cnf $CONFIG");
+    if ($?) {
+	fatal("Could not copy new file to $CONFIG");
+    }
 }
 
 sub Notify($)
