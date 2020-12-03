@@ -94,7 +94,7 @@ else:
     link.setNoBandwidthShaping();
     link.setJumboFrames()
     
-    COMMAND += " -t X310 -r params.NodeID"
+    COMMAND += " -t X310 -r " + params.NodeID
     pass
 
 if params.NoRun:
