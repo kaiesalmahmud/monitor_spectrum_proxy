@@ -41,6 +41,11 @@ pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="Install but do not run the monitor.")
 
+# Optional viewer only mode
+pc.defineParameter("Viewer", "Viewer only",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="Run the monitor in viewer mode.")
+
 params = pc.bindParameters()
 
 # Check parameter validity.
@@ -49,6 +54,10 @@ if params.Where == "":
     pass
 if params.NodeID == "":
     pc.reportError(portal.ParameterError("You must provide a node ID", ["NodeID"]))
+    pass
+
+if params.NoRun and params.Viewer:
+    pc.reportError(portal.ParameterError("Please check only one", ["Viewer"]))
     pass
 
 pc.verifyParameters()
@@ -90,6 +99,8 @@ else:
 
 if params.NoRun:
     COMMAND += " -n"
+elif params.Viewer:
+    COMMAND += " -V"
     pass
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 
