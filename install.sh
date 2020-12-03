@@ -66,15 +66,13 @@ if [ $? -ne 0 ]; then
     echo 'uhd_images_downloader failed'
     exit 1
 fi
-
-nodeid=`cat /var/emulab/boot/nodeid` &&
-    echo "{ \"devices\" : { \"${nodeid}:rf0\" : {\"name\" : \"${nodeid}:rf0\", \"channels\" : {\"0\" : \"RX2\"} } } }" | sudo tee -a /etc/rfmonitor/device_config.json
+sudo uhd_images_downloader -t x3xx
 if [ $? -ne 0 ]; then
-    echo 'Creating device_config.json failed'
+    echo 'uhd_images_downloader failed'
     exit 1
 fi
 
-
+#
 # Marker that says we completed the install. In case we have to power
 # cycle to bring the B210 back to life.
 #
