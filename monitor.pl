@@ -229,11 +229,21 @@ while ($LOOPS) {
     }
     unlink($filename);
     if ($domain eq "emulab.net") {
-	system("$TAR -cf $SAVEDIR/${ID}.gz.tmp -C /proj $pid/exp/$eid/$name");
+	my $mdir = "/proj/$pid/monitor";
+	if (! -e $mdir) {
+	    if (!mkdir($mdir, 0775)) {
+		fatal("Could not mkdir $mdir: $!");
+	    }
+	}
+	my $tfile = "$mdir/${eid}.gz";
+	unlink($tfile)
+	    if (-e $tfile);
+	
+	system("$TAR -cf ${tfile}.tmp -C /proj $pid/exp/$eid/$name");
 	if ($?) {
 	    fatal("Could not create dopey tar file");
 	}
-	system("/bin/mv $SAVEDIR/${ID}.gz.tmp $SAVEDIR/${ID}.gz");
+	system("/bin/mv ${tfile}.tmp $tfile");
 	if ($?) {
 	    fatal("Could not move dopey tar file into place");
 	}
