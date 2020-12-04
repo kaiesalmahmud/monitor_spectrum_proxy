@@ -16,9 +16,15 @@ COMMAND   = "/local/repository/monitor.pl"
 # Two types of situations; B210 directly connected, and X310 ethernet connected.
 # AT the moment, B210 means an FE and X310 means a base station.
 #
-types = [
+radioTypes = [
     ('B210', 'B210'),
     ('X310', 'X310'),
+]
+computeTypes = [
+    ('Any', 'Any'),
+    ('d740', 'd740'),
+    ('d430', 'd430'),
+    ('d820', 'd820'),
 ]
 
 # Create a portal context.
@@ -34,7 +40,11 @@ pc.defineParameter("NodeID", "Node",
                    portal.ParameterType.STRING, "ed1")
 
 pc.defineParameter("Type", "Radio Type",
-                   portal.ParameterType.STRING, types[0], types)
+                   portal.ParameterType.STRING, radioTypes[0], radioTypes)
+
+pc.defineParameter("ComputeType", "Compute Type",
+                   portal.ParameterType.STRING, computeTypes[0], computeTypes,
+                   longDescription="Select a type for X310 compute host")
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
@@ -71,8 +81,12 @@ if params.Type == "B210":
     COMMAND += " -t B210"
 else:
     # Node
-    node = request.RawPC('host')
-    node.hardware_type        = "d740"
+    node = request.RawPC(params.NodeID + '-host')
+    if params.ComputeType == "Any":
+        node.hardware_type = "powder-compute"
+    else:
+        node.hardware_type = params.ComputeType
+        pass
     node.disk_image           = IMAGE
     node.component_manager_id = MS
 
