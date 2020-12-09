@@ -65,9 +65,16 @@ class Device():
         self.antennas = antennas
         self.num_samps_req = num_samps_req
         self.is_bs = is_bs
+
+        self.device_args  = "recv_frame_size=" + str(recv_frame_size)
+        self.device_args += ",num_recv_frames=" + str(num_recv_frames)
+        if is_bs:
+            self.device_args += ",master_clock_rate=184.32e6"
+            pass
+        print("[DEVICE] device args: " + self.device_args)
         
         # setup USRP radio device
-        self.usrp = uhd.usrp.MultiUSRP("recv_frame_size={},num_recv_frames={}".format(recv_frame_size,num_recv_frames)) 
+        self.usrp = uhd.usrp.MultiUSRP(self.device_args) 
         
         # set up time and frequency ref signals based on available sources
         try:
