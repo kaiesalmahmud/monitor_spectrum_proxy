@@ -28,6 +28,7 @@ my $noinstall   = 0;
 my $viewer      = 0;
 my $type        = "B210";
 my $radioID;
+my $gain;
 my $CONFIG      = "/etc/rfmonitor/device_config.json";
 my $LOGFILE     = "/tmp/monitor.$$";
 my $REPO        = "/local/repository";
@@ -180,7 +181,7 @@ if ($viewer) {
 	    exit(0);
 	}
     }
-    system("$MONITOR -g 85 -s 127.0.0.1 -p 12237");
+    system("$MONITOR -g $gain -s 127.0.0.1 -p 12237");
     exit(0);
 }
 
@@ -197,7 +198,7 @@ while ($LOOPS) {
     }
     print $fp "frequency,power\n";
     
-    if (! open(MON, "$MONITOR -o -n -g 85 |")) {
+    if (! open(MON, "$MONITOR -o -n -g $gain |")) {
 	fatal("Could not start ssh-keygen");
     }
     while (<MON>) {
@@ -314,6 +315,8 @@ sub ProbeB210()
     if ($?) {
 	fatal("Could not copy new file to $CONFIG");
     }
+    # Default gain for B210s
+    $gain = 85;
     return 0;
 }
 
@@ -387,6 +390,8 @@ sub ProbeX310()
     if ($?) {
 	fatal("Could not copy new file to $CONFIG");
     }
+    # Default gain for X310s
+    $gain = 10;
 }
 
 sub Notify($)
