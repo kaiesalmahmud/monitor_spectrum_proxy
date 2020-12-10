@@ -190,14 +190,13 @@ if ($viewer) {
 # If things go smoothly, move it to the wbstore save directory.
 #
 while ($LOOPS) {
+    my $headered = 0;
     my $ID = ($type eq "B210" ? $nodeID : $radioID);
     
     my ($fp, $filename) = tempfile(UNLINK => 0);
     if (!$fp) {
 	fatal("Could not open a temporary file");
     }
-    print $fp "frequency,power\n";
-    
     if (! open(MON, "$MONITOR -o -n -g $gain |")) {
 	fatal("Could not start ssh-keygen");
     }
@@ -207,6 +206,14 @@ while ($LOOPS) {
 	    next;
 	}
 	my (undef, undef, $freq, $power, $center) = split(",");
+	if (!$headered) {
+	    print $fp "frequency,power";
+	    if (defined($center)) {
+		printf $fp ",center_freq", $center;
+	    }
+	    print $fp "\n";
+	    $headered = 1;
+	}
 	printf $fp "%.3f,%.3f", $freq, $power;
 	if (defined($center)) {
 	    printf $fp ",%.4f", $center;
