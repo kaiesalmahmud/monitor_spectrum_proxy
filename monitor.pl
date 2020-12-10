@@ -206,8 +206,12 @@ while ($LOOPS) {
 	    print $_;
 	    next;
 	}
-	my (undef, undef, $freq, $power) = split(",");
-	printf $fp "%.3f,%.3f\n", $freq, $power;
+	my (undef, undef, $freq, $power, $center) = split(",");
+	printf $fp "%.3f,%.3f", $freq, $power;
+	if (defined($center)) {
+	    printf $fp ",%.4f", $center;
+	}
+	print $fp "\n";
     }
     close($fp);
     if (!close(MON)) {
@@ -407,6 +411,7 @@ sub Notify($)
 	# So it has time to depart before experiment termination.
 	sleep(10);
     }
+    
 }
 
 my $exiting = 0;
@@ -416,6 +421,7 @@ sub fatal($)
     my ($mesg) = $_[0];
     $exiting = 1;
     Notify($mesg);
+    system("/bin/cp $LOGFILE /proj/$pid");
 
     die("*** $0:\n".
 	"    $mesg\n");
