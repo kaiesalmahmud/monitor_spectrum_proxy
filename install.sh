@@ -10,17 +10,6 @@ fi
 
 RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
 
-REPO="powder-testing"
-
-# WTF! The tabs before priority actually matter.
-echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
-    echo "http://repos.emulab.net/$REPO/ubuntu	priority:2" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
-    echo "deb mirror+file:/etc/apt/emulab-$REPO-mirrorlist.txt $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/$REPO.list
-if [ $? -ne 0 ]; then
-    echo "creating $REPO failed"
-    exit 1
-fi
-
 REPO="powder"
 
 # WTF! The tabs before priority actually matter.
