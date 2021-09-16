@@ -39,6 +39,7 @@ my $TAR         = "/bin/tar";
 my $FIND        = "/usr/bin/uhd_find_devices";
 my $PROBE       = "/usr/bin/uhd_usrp_probe";
 my $FIXIT       = "/usr/lib/uhd/utils/b2xx_fx3_utils -D";
+my $DOWNLOADER  = "/usr/bin/uhd_images_downloader";
 my $LOADER      = "/usr/bin/uhd_image_loader";
 my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
@@ -66,6 +67,7 @@ $| = 1;
 # Protos
 sub ProbeB210();
 sub ProbeX310();
+sub DownLoadImages($);
 sub fatal($);
 sub Notify($);
 
@@ -272,6 +274,9 @@ exit(0);
 #
 sub ProbeB210()
 {
+    if (DownLoadImages("b2xx")) {
+	fatal("Could not download b2xx images");
+    }
     #
     # Probe to see if we can find the B210. If not, power cycle.
     # We capture the output so we make sure its on USB 3 instead of 2.
@@ -334,10 +339,18 @@ sub ProbeB210()
 #
 # Proble an X310 connected by ethernet link. IP is hardwired.
 #
+# Reflash: Do an uhd_images_downloader, then:
+#   uhd_image_loader --args "type=x300,addr=192.168.40.2,fpga=XG"
+# then power cycle.
+#
 sub ProbeX310()
 {
     # Need this for X/N 310s
     system("sudo /sbin/sysctl -w net.core.wmem_max=24862979");
+
+    if (DownLoadImages("x3xx")) {
+	fatal("Could not download x3xx images");
+    }
 
     #
     # Use find to see if its even available. 
@@ -362,9 +375,9 @@ sub ProbeX310()
     $output = `$PROBE 2>&1`;
     print $output;
     if ($?) {
-	if ($output =~ /Error: Expected FPGA/) {
+	if ($output =~ /Error: .* Expected FPGA/) {
 	    print "Flashing the X310\n";
-	    system("$LOADER --args='type=x300,addr=192.168.40.2'");
+	    system("$LOADER --args='type=x300,addr=192.168.40.2,fpga=XG'");
 	}
 	if ($?) {
 	    fatal("Could not load required FPGA firmware");
@@ -419,6 +432,27 @@ sub Notify($)
 	sleep(10);
     }
     
+}
+
+#
+# Having some problems with image downloading, so try more then once.
+#
+sub DownLoadImages($)
+{
+    my ($type) = @_;
+
+    print "Downloading image type $type\n";
+
+    # Short delay seems to help
+    sleep(3);
+    system("sudo $DOWNLOADER -t $type");
+    if ($?) {
+	sleep(5);
+	system("sudo $DOWNLOADER -t $type");
+	return -1
+	    if ($?);
+    }
+    return 0;
 }
 
 my $exiting = 0;
