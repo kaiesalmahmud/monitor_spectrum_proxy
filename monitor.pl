@@ -40,6 +40,7 @@ my $FIND        = "/usr/bin/uhd_find_devices";
 my $PROBE       = "/usr/bin/uhd_usrp_probe";
 my $FIXIT       = "/usr/lib/uhd/utils/b2xx_fx3_utils -D";
 my $DOWNLOADER  = "/usr/bin/uhd_images_downloader";
+my $CACHE       = "https://www.emulab.net/downloads/ettus/binaries/cache";
 my $LOADER      = "/usr/bin/uhd_image_loader";
 my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
@@ -443,12 +444,10 @@ sub DownLoadImages($)
 
     print "Downloading image type $type\n";
 
-    # Short delay seems to help
-    sleep(3);
-    system("sudo $DOWNLOADER -t $type");
+    system("sudo $DOWNLOADER -b $CACHE -t $type");
     if ($?) {
 	sleep(5);
-	system("sudo $DOWNLOADER -t $type");
+	system("sudo $DOWNLOADER -b $CACHE -t $type");
 	return -1
 	    if ($?);
     }
