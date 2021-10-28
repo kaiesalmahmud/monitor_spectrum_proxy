@@ -21,7 +21,7 @@ radioTypes = [
     ('X310', 'X310'),
 ]
 computeTypes = [
-    ('Any', 'Any'),
+    ('powder-compute', 'Any'),
     ('d740', 'd740'),
     ('d430', 'd430'),
     ('d820', 'd820'),
