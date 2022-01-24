@@ -50,6 +50,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# Ick
+sudo sed -i.bak -e 's/join(req_args, ",")/join(",", req_args)/' /usr/local/bin/script_wrapper.py
+
 #
 # Marker that says we completed the install. In case we have to power
 # cycle to bring the B210 back to life.
