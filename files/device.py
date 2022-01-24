@@ -53,23 +53,34 @@ class Device():
 
     """
     
-    def __init__(self, gain=C.GAIN, rate=C.MAX_INST_BW, channels=C.CHANNELS, num_samps_req=C.FFT_SIZE,
+    def __init__(self, gain=C.GAIN, rate=C.MAX_INST_BW,
+                 channels=C.CHANNELS, 
+                 num_samps_req=C.FFT_SIZE,
                  is_bs=False, RXA="TX/RX", RXB="TX/RX",
-                 recv_frame_size=8176, num_recv_frames=50):
+                 recv_frame_size=8176, num_recv_frames=50,
+                 antennas=["TX/RX", "TX/RX"]):
         self.gain = gain
         self.rate = rate
         self.chans = channels
+        self.antennas = antennas
         self.num_samps_req = num_samps_req
         self.is_bs = is_bs
+
+        self.device_args  = "recv_frame_size=" + str(recv_frame_size)
+        self.device_args += ",num_recv_frames=" + str(num_recv_frames)
+        if is_bs:
+            self.device_args += ",master_clock_rate=184.32e6"
+            pass
+        print("[DEVICE] device args: " + self.device_args)
         
         # setup USRP radio device
-        self.usrp = uhd.usrp.MultiUSRP("recv_frame_size={},num_recv_frames={}".format(recv_frame_size,num_recv_frames)) 
+        self.usrp = uhd.usrp.MultiUSRP(self.device_args) 
         
         # set up time and frequency ref signals based on available sources
         try:
             if is_bs:
-                self.usrp.set_clock_source("external") # 10 MHz ref
-                self.usrp.set_time_source("external")  # PPS ref
+                self.usrp.set_clock_source("internal")
+                self.usrp.set_time_source("internal")
                 print("[DEVICE] using external reference source")
             else:
                 self.usrp.set_clock_source("gpsdo")
@@ -80,40 +91,14 @@ class Device():
             self.usrp.set_clock_source("internal")
             print("[DEVICE] using internal reference source")
 
-        if type(channels) is dict:
-            chans = [];
-            
-            for channel in channels:
-                antenna = channels[channel]
-                chan = int(channel)
-                
-                self.usrp.set_rx_rate(rate, chan)
-                self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(2400e6), chan)
-                self.usrp.set_rx_gain(gain, chan)
+        # set to a default value to initialize the radio
+        for chan in self.chans:
+            self.usrp.set_rx_rate(rate, chan)
+            self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(2400e6), chan)
+            self.usrp.set_rx_gain(gain, chan)
 
-                # set the receiver port based on the given configuration
-                self.usrp.set_rx_antenna(antenna, chan)
-                
-                # Analog band width is not properly set when using two channels
-                # currently (likely a UHD bug)
-                # reduce the analog bandwidth to ~90% of the sample rate.
-                # See radio/constants.py for more details. 
-                self.usrp.set_rx_bandwidth(C.ANALOG_BW, chan)
-                chans.append(chan)
-                pass
-            
-            self.chans = chans
-        else:
-            # set to a default value to initialize the radio
-            for chan in self.chans:
-                self.usrp.set_rx_rate(rate, chan)
-                self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(2400e6), chan)
-                self.usrp.set_rx_gain(gain, chan)
+            self.usrp.set_rx_antenna(antennas[chan], chan)
         
-            # set the receiver ports based on the given configuration
-            self.usrp.set_rx_antenna(RXA, 0)
-            self.usrp.set_rx_antenna(RXB, 1)
-
             # Analog band width is not properly set when using two channels currently (likely a UHD bug)
             # reduce the analog bandwidth to ~90% of the sample rate. See radio/constants.py for more details.
             self.usrp.set_rx_bandwidth(C.ANALOG_BW, 0)
@@ -149,15 +134,10 @@ class Device():
         print("[DEVICE] Analog bandwidth set to {:.2f} MHz".format(self.usrp.get_rx_bandwidth()/1e6))
         print("[DEVICE] Keeping {} samples from FFT size {} ".format(C.N, C.FFT_SIZE))
         print("[DEVICE] Antennas configured: ", end='')
-        if type(channels) is dict:
-            for channel in channels:
-                antenna = channels[channel]
-                print("RF{}:{} ".format(channel, antenna), end='')
-                pass
-        else:
-            for channel in channels:
-                print("RF{}:{} ".format(channel, self.usrp.get_rx_antenna(1)), end='')
-                pass
+
+        for channel in channels:
+            antenna = antennas[channel]
+            print("RF{}:{} ".format(channel, antenna), end='')
             pass
         print("")
         print("[DEVICE] USRP radio initialized successfully")        
@@ -171,6 +151,23 @@ class Device():
         self.default_drop = 50*self.dev_buffer_size
         self.drops = []
 
+        return
+
+    def set_antennas(self, channels):
+        self.stop_stream()
+        self.drain_stream()
+        for channel in channels:
+            antenna = channels[channel];
+
+            self.usrp.set_rx_antenna(antenna, int(channel))
+            pass
+        self.start_stream()
+        time.sleep(1)
+        print("[DEVICE] Antennas (re)configured: ", end='')
+        for channel in channels:
+            antenna = channels[channel];
+            print("RF{}:{} ".format(channel, antenna), end='')
+        print("")
         return
 
     def get_samples(self, frequency):
@@ -340,6 +337,26 @@ class Device():
         """
         stream_stop_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
         self.streamer.issue_stream_cmd(stream_stop_cmd)
+
+    def start_stream(self):
+        """ Sends a start command to the FPGA.
+        """
+        start_cmd = self._get_stream_start_cmd()
+        self.streamer.issue_stream_cmd(start_cmd)
+
+    def drain_stream(self):
+        rx_metadata = uhd.types.RXMetadata()
+        count = 0
+        
+        while True:
+            cc = self.streamer.recv(self.garbage_buffer, rx_metadata)
+            count = count + cc
+            if cc == 0 or rx_metadata.end_of_burst:
+                break;
+            pass
+        print("drain_stream: ", end='');
+        print(count);
+        return
 
     def restart_stream(self):
         """ Stops, then restarts streaming on the FPGA

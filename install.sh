@@ -8,15 +8,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-REPO="powder"
 RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
+
+REPO="powder"
 
 # WTF! The tabs before priority actually matter.
 echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
     echo "http://repos.emulab.net/$REPO/ubuntu	priority:2" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
     echo "deb mirror+file:/etc/apt/emulab-$REPO-mirrorlist.txt $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/$REPO.list
 if [ $? -ne 0 ]; then
-    echo 'creating powder.list failed'
+    echo "creating $REPO failed"
     exit 1
 fi
 
@@ -27,11 +28,7 @@ echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a
     echo "http://repos.emulab.net/$REPO/ubuntu	priority:2" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
     echo "deb mirror+file:/etc/apt/emulab-$REPO-mirrorlist.txt $RELEASE main" | sudo tee -a /etc/apt/sources.list.d/$REPO.list
 if [ $? -ne 0 ]; then
-    echo 'creating powder.list failed'
-    exit 1
-fi
-if [ $? -ne 0 ]; then
-    echo 'creating powder-endpoints.list failed'
+    echo "creating $REPO failed"
     exit 1
 fi
 
@@ -41,29 +38,20 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-uhd uhd-host python3-tk
+sudo apt-get -y install --no-install-recommends uhd-host libuhd-dev python3-uhd
 if [ $? -ne 0 ]; then
-    echo 'apt-get install failed'
+    echo 'apt-get install UHD failed'
     exit 1
 fi
 
-sudo uhd_images_downloader -t b2xx
+sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-tk python3-matplotlib socat tigervnc-standalone-server autocutsel fvwm
 if [ $? -ne 0 ]; then
-    echo 'uhd_images_downloader failed'
+    echo 'apt-get install support failed'
     exit 1
 fi
 
-nodeid=`cat /var/emulab/boot/nodeid` &&
-    echo "{ \"devices\" : [\"${nodeid}:rf0\"], \"channels\" : {\"0\" : \"RX2\"} }" | sudo tee -a /etc/rfmonitor/device_config.json
-if [ $? -ne 0 ]; then
-    echo 'Creating device_config.json failed'
-    exit 1
-fi
-
-# Temporary fixes.
-
-sudo cp -f /local/repository/files/device.py /usr/lib/python3/dist-packages/monitor/radio
-sudo cp -f /local/repository/files/iso_receiver.py /usr/lib/python3/dist-packages/monitor/radio
+# Ick
+sudo sed -i.bak -e 's/join(req_args, ",")/join(",", req_args)/' /usr/local/bin/script_wrapper.py
 
 #
 # Marker that says we completed the install. In case we have to power

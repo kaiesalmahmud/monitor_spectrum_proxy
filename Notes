@@ -1,0 +1,20 @@
+/usr/lib/uhd/examples/tx_waveforms --ant TX/RX --channel 0 --rate 1e6 --freq 5e9 --gain 50
+
+On a cellsdr radio:
+
+/usr/lib/uhd/examples/tx_waveforms --freq 2622e6 --rate 5e6 --gain 80
+
+This also works, but need gnuradio installed.
+
+TX: uhd_siggen_gui -f 2625e6 -s 10e6
+RX: uhd_fft -f 2625e6 -s 10e6 -g 35
+
+But see image from Alex about settings in the GUI.
+
+Kobus command:
+
+uhd_fft -s 50M -f 2340M
+
+Alex wants this too:
+
+uhd_fft -s 50M -f 2110M

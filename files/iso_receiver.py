@@ -1,4 +1,5 @@
 from __future__ import division
+import sys
 import pickle,os,time
 import numpy as np
 from . import signal_utils as su
@@ -37,6 +38,7 @@ class IsoReceiver(receiver.Receiver):
         self.debug = args.debug
         self.print_and_log("[RECV] created log file at {}".format(LOGS_DIR))
         self.dev_config = device_configuration
+        self.is_bs = False
 
         self.num_rows = C.N_BINS_TOTAL
         self.print_and_log("[RECV] Receiver N bins total {} (number of rows in messsage)".format(self.num_rows))
@@ -52,25 +54,74 @@ class IsoReceiver(receiver.Receiver):
                 self.cal_measurements = None
 
         self.print_and_log("[RECEIVER] Saving measurements for {} frequencies over {} steps".format(self.num_rows, C.NUM_STEPS))
-        self.print_and_log("[RECEIVER] resolution: {:.2f} kHz".format(C.RES_HZ/1e3)) 
+        self.print_and_log("[RECEIVER] resolution: {:.2f} kHz".format(C.RES_HZ/1e3))
 
-        # set up the radio device
-        if "channels" in self.dev_config:
-            self.devs =  self.dev_config["devices"]
-            self.channels = self.dev_config["channels"]
-        else:
-            self.channels = C.CHANNELS
+        #
+        # devices now looks like:
+        #
+        # "devices" : {
+        #    "nuc1:rf0" : {
+        #       "name"     : "nuc1:rf0",
+        #       "channels" : {"0" : "RX2", "1" : "RX2"},
+        #    },
+        # }
+        #
+        # If there are multiple devices, they have to use the same
+        # channels, but with different antennas. This allows us to
+        # switch the antennas on the fly, say for monitoring two
+        # frontends, one attached to 0:RX2,1:RX2, and the one being
+        # 0:TX/RX,1:TX/RX
+        #
+        # For backwards compat, convert old spec to new spec, which
+        # is quite simple: { "nuc2":["rf0"] }
+        #
+        if not "devices" in self.dev_config:
+            devs     = self.dev_config
+            node_id  = list(devs.keys())[0]
+            iface    = devs[node_id][0]
+            devname  = node_id + ":" + iface
 
-            # pull devs from dev_config 
-            self.devs = []
-            for k in self.dev_config:
-                for frontend in self.dev_config[k]:
-                    self.devs.append(str(k) + ":" + str(frontend))
+            self.dev_config["devices"] = {
+                devname : {
+                    "name"     : devname,
+                    "channels" : {"0" : "TX/RX", "1" : "TX/RX"}
+                }
+            }
+            pass
+
+        print(str(self.dev_config["devices"]))
+        
+        self.devs =  self.dev_config["devices"]
+        self.channels = []
+        self.antennas = []
+        for devname in self.devs:
+            channels = self.devs[devname]["channels"]
+            if len(self.channels) == 0:
+                for chan in channels:
+                    self.channels.append(int(chan))
+                    self.antennas.append(channels[chan])
+                    pass
+            else:
+                if len(channels) != len(self.channels):
+                    print("Channel length mismatch in configuration");
+                    sys.exit(1)
+                    pass
+                pass
+            pass
+
+        print(str(self.channels))
+
+        if "is_bs" in self.dev_config:
+            self.is_bs = self.dev_config["is_bs"]
             pass
         
         self.gain = args.gain
         self.rate = C.MAX_INST_BW
-        self.radio_dev = device.Device(gain=self.gain, rate=self.rate,channels=self.channels)        
+        self.radio_dev = device.Device(gain=self.gain,
+                                       rate=self.rate,
+                                       channels=self.channels,
+                                       antennas=self.antennas,
+                                       is_bs=self.is_bs)
 
     def set_gain(self, gain_val):
         """ Set the gain in the receiving device
@@ -120,9 +171,17 @@ class IsoReceiver(receiver.Receiver):
 
 
     def _set_rf_port(self, rf_port):
-        # TODO when alex has board ready, set this
-        pass
-     
+        #
+        # This is eventually supposed to use a switching board. In the meantime
+        # just change the antennas on the channels, since we are using a single
+        # B210 with two channels and four receivers. 
+        #
+        # No need to do this if only one device.
+        #
+        if len(self.devs) > 1:
+            self.radio_dev.set_antennas(self.devs[rf_port]["channels"]);
+            pass
+        return
     
     def _get_psd_welch(self, rf_port):
         """ Collect PSD
