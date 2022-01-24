@@ -65,7 +65,7 @@ while True:
     powers = []
     for row in reader:
         if israwdata == True:
-            if len(row) != 4:
+            if len(row) != 4 and len(row) != 5:
                 print(str(row))
                 continue
             # Terminator line
