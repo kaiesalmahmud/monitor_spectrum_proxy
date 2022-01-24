@@ -111,6 +111,11 @@ else:
     COMMAND += " -t X310 -r " + params.NodeID
     pass
 
+#
+# Start up X11 VNC for display.
+#
+node.startVNC()
+
 if params.NoRun:
     COMMAND += " -n"
 elif params.Viewer:
