@@ -8,18 +8,18 @@ import geni.rspec.pg as pg
 import geni.rspec.emulab
 
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
-ENDPOINT  = "urn:publicid:IDN+bus-test2.powderwireless.net+authority+cm"
+ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 COMMAND   = "/local/repository/monitor.pl"
 
 #
 # Two types of situations; B210 directly connected, and X310 ethernet connected.
-# AT the moment, B210 means an FE and X310 means a base station.
 #
 radioTypes = [
     ('B210', 'B210'),
     ('X310', 'X310'),
 ]
+# For X310s only.
 computeTypes = [
     ('Any', 'Any'),
     ('d740', 'd740'),
@@ -37,7 +37,7 @@ pc.defineParameter("Where", "Where",
                    portal.ParameterType.STRING, ENDPOINT)
 
 pc.defineParameter("NodeID", "Node",
-                   portal.ParameterType.STRING, "ed1")
+                   portal.ParameterType.STRING, "nuc1")
 
 pc.defineParameter("Type", "Radio Type",
                    portal.ParameterType.STRING, radioTypes[0], radioTypes)
@@ -46,28 +46,36 @@ pc.defineParameter("ComputeType", "Compute Type",
                    portal.ParameterType.STRING, computeTypes[0], computeTypes,
                    longDescription="Select a type for X310 compute host")
 
+# Store results to local www directory and start nginx
+pc.defineParameter("WebSave", "Local Web Server",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="Save results to local directory and " +
+                   "start a web server to access them. See the instructions " +
+                   "for more information")
+
+# Number of loops to run.
+pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
+                   longDescription="Number of times to run the monitor")
+
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
-                   longDescription="Install but do not run the monitor.")
-
-# Optional viewer only mode
-pc.defineParameter("Viewer", "Viewer only",
-                   portal.ParameterType.BOOLEAN, False,
-                   longDescription="Run the monitor in viewer mode.")
+                   longDescription="Install but do not run the monitor")
 
 params = pc.bindParameters()
 
 # Check parameter validity.
 if params.Where == "":
-    pc.reportError(portal.ParameterError("You must provide an aggregate.", ["Where"]))
+    pc.reportError(portal.ParameterError(
+        "You must provide an aggregate.", ["Where"]))
     pass
 if params.NodeID == "":
-    pc.reportError(portal.ParameterError("You must provide a node ID", ["NodeID"]))
+    pc.reportError(portal.ParameterError(
+    "You must provide a node ID", ["NodeID"]))
     pass
-
-if params.NoRun and params.Viewer:
-    pc.reportError(portal.ParameterError("Please check only one", ["Viewer"]))
+if params.runCount <= 0:
+    pc.reportError(portal.ParameterError(
+    "Run count must be greater the zero.", ["runCount"]))
     pass
 
 pc.verifyParameters()
@@ -118,8 +126,12 @@ node.startVNC()
 
 if params.NoRun:
     COMMAND += " -n"
-elif params.Viewer:
-    COMMAND += " -V"
+    pass
+if params.WebSave:
+    COMMAND += " -W"
+    pass
+if params.runCount > 1:
+    COMMAND += " -c " + params.runCount;
     pass
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 

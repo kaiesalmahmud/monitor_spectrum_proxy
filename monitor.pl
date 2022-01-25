@@ -34,6 +34,7 @@ my $CONFIG      = "/etc/rfmonitor/device_config.json";
 my $LOGFILE     = "/tmp/monitor.$$";
 my $REPO        = dirname($PROGRAM_NAME);
 my $INSTALL     = "$REPO/install.sh";
+my $INSTALLNGINX= "$REPO/install-nginx.sh";
 my $MONITOR     = "/usr/bin/rfmonitor";
 my $MONITORETC  = "/etc/rfmonitor";
 my $TAR         = "/bin/tar";
@@ -155,13 +156,24 @@ if (! -e "$HOME/.ssl/emulab.pem") {
 }
 
 # Install the monitor packages.
-if (!$noinstall && ! -e "$MONITORETC/.ready") {
-    system($INSTALL);
-    if ($?) {
-	fatal("Could not install the monitor");
-    }
+if (!$noinstall) {
     if (! -e "$MONITORETC/.ready") {
-	fatal("Monitor did not install properly");
+	system($INSTALL);
+	if ($?) {
+	    fatal("Could not install the monitor");
+	}
+	if (! -e "$MONITORETC/.ready") {
+	    fatal("Monitor did not install properly");
+	}
+    }
+    if ($websave && ! -e "/local/nginx-done") {
+	system($INSTALLNGINX);
+	if ($?) {
+	    fatal("Could not install nginx");
+	}
+	if (! -e "/local/nginx-done") {
+	    fatal("nginx did not install properly");
+	}
     }
 }
 
