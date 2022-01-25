@@ -21,17 +21,18 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:";
+my $optlist     = "dniVr:t:c:W";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
-my $type        = "B210";
+my $websave     = 0;
+my $type;
 my $radioID;
 my $gain;
 my $CONFIG      = "/etc/rfmonitor/device_config.json";
 my $LOGFILE     = "/tmp/monitor.$$";
-my $REPO        = "/local/repository";
+my $REPO        = dirname($PROGRAM_NAME);
 my $INSTALL     = "$REPO/install.sh";
 my $MONITOR     = "/usr/bin/rfmonitor";
 my $MONITORETC  = "/etc/rfmonitor";
@@ -47,6 +48,7 @@ my $GZIP        = "/bin/gzip";
 my $REBOOT      = "/usr/local/bin/node_reboot";
 my $IFACE       = "rf0";  # Someday we will be able to monitor others TXs
 my $SAVEDIR     = "$VARDIR/save";
+my $WEBDIR      = "/local/www";
 my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
@@ -94,8 +96,14 @@ if (defined($options{"n"})) {
 if (defined($options{"V"})) {
     $viewer = 1;
 }
+if (defined($options{"W"})) {
+    $websave = 1;
+}
 if (defined($options{"t"})) {
     $type = $options{"t"};
+}
+if (defined($options{"c"})) {
+    $LOOPS = $options{"c"};
 }
 if (defined($options{"r"})) {
     $radioID = $options{"r"};
@@ -110,10 +118,6 @@ if (! -t || ($viewer && !$debug)) {
 	die("opening $LOGFILE for STDOUT: $!");
     open(STDERR, ">> $LOGFILE") or
 	die("opening $LOGFILE for STDERR: $!");
-}
-
-if ($type ne "B210" && !defined($radioID)) {
-    fatal("Must provide radio node ID with the -r option");
 }
 
 # We need the node ID for the output files.
@@ -161,10 +165,24 @@ if (!$noinstall && ! -e "$MONITORETC/.ready") {
     }
 }
 
+#
+# Infer the type from node id. Fragile.
+#
+if (!defined($type)) {
+    if ($nodeID =~ /nuc/ || $nodeID =~ /^ed\d+/) {
+	$type = "B210";
+    }
+    else {
+	$type = "X310";
+    }
+}
 if ($type eq "B210") {
     ProbeB210();
 }
 elsif ($type eq "X310") {
+    if (!defined($radioID)) {
+	fatal("Must provide radio node ID with the -r option");
+    }
     ProbeX310();
 }
 else {
@@ -229,12 +247,16 @@ while ($LOOPS) {
     }
     my $now  = time();
     my $name = "${ID}:rf0-${now}.csv.gz";
-    #
-    # Ick, if we are running on the Mothership, have to write the file into
-    # /proj instead of wbstore. Lets create a tar file that looks like the
-    # wbstore file and has a known name.
-    #
-    if ($domain eq "emulab.net") {
+
+    if ($websave) {
+	$SAVEDIR = $WEBDIR;
+    }
+    elsif ($domain eq "emulab.net") {
+	#
+	# Ick, if we are running on the Mothership, have to write the file into
+	# /proj instead of wbstore. Lets create a tar file that looks like the
+	# wbstore file and has a known name.
+	#
 	$SAVEDIR = "/proj/$pid/exp/$eid";
     }
     print "Writing file to $SAVEDIR/$name\n";
@@ -243,7 +265,8 @@ while ($LOOPS) {
 	fatal("Could not gzip data into the save directory.");
     }
     unlink($filename);
-    if ($domain eq "emulab.net") {
+
+    if (!$websave && $domain eq "emulab.net") {
 	my $mdir = "/proj/$pid/monitor";
 	if (! -e $mdir) {
 	    if (!mkdir($mdir, 0775)) {
@@ -266,6 +289,9 @@ while ($LOOPS) {
     $LOOPS--;
     sleep($LOOPDELAY)    
 	if ($LOOPS);
+}
+if ($websave) {
+    system("/bin/touch $WEBDIR/DONE");
 }
 Notify("Worked") if ($debug);
 exit(0);
