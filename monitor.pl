@@ -242,7 +242,7 @@ while ($LOOPS) {
 	if (!$headered) {
 	    print $fp "frequency,power";
 	    if (defined($center)) {
-		printf $fp ",center_freq", $center;
+		printf $fp ",center_freq";
 	    }
 	    print $fp "\n";
 	    $headered = 1;

@@ -16,11 +16,21 @@ if [ -f $OURDIR/nginx-done ]; then
     exit 0
 fi
 
-sudo apt-get -y install --no-install-recommends nginx
+sudo apt-get -y install --no-install-recommends nginx php-fpm
 if [ $? -ne 0 ]; then
     echo 'apt-get install nginx failed'
     exit 1
 fi
+
+#
+# Version number encoded in php config files (paths). Gack.
+#
+phpvers=`php -v | head -n 1 | awk '{print $2}' | awk -F. '{print $1 "." $2}'`
+phpinit="/etc/php/${phpvers}/fpm/php.ini"
+
+# Change this bad default and restart
+$SUDO sed -i.bak -s 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/' $phpinit
+$SUDO systemctl restart php${phpvers}-fpm
 
 $SUDO mkdir -p $WWWPUB
 $SUDO chown $SWAPPER $WWWPUB
@@ -35,15 +45,23 @@ server {
         listen 7998 default_server;
         listen [::]:7998 default_server;
         root /var/www/profile-public;
-        index index.html;
+        index index.html index.php;
         server_name _;
         location / {
                  autoindex on;
         }
+        location ~ \.php$ {
+		include snippets/fastcgi-php.conf;
+	        fastcgi_pass unix:/run/php/php${phpvers}-fpm.sock;
+	}
 }
 EOF
 $SUDO ln -s /etc/nginx/sites-available/profile-public \
-    /etc/nginx/sites-enabled/profile-public
+      /etc/nginx/sites-enabled/profile-public
+
+# Populate the www dir from the repo.
+rsync -av /local/repository/www/ /local/www
+
 sudo systemctl enable nginx
 sudo systemctl restart nginx
 
