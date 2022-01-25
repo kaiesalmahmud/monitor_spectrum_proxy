@@ -60,7 +60,7 @@ $SUDO ln -s /etc/nginx/sites-available/profile-public \
       /etc/nginx/sites-enabled/profile-public
 
 # Populate the www dir from the repo.
-rsync -av /local/repository/www/ /local/www
+$SUDO -u $SWAPPER rsync -av /local/repository/www/ /local/www
 
 sudo systemctl enable nginx
 sudo systemctl restart nginx
