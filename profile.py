@@ -1,4 +1,9 @@
-"""Allocate an FE and run the monitor. """
+"""Allocate an FE and run the monitor.
+
+Instructions:
+If you have enabled the __Local Web Server__ then you can browse the
+[result frequency graphs](http://{host-nodeB}:7998/frequency-graphs.html).
+"""
 
 # Import the Portal object.
 import geni.portal as portal
