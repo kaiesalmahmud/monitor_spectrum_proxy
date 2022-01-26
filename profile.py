@@ -1,16 +1,19 @@
-"""Allocate an FE and run the monitor.
-
-Instructions:
-If you have enabled the __Local Web Server__ then you can browse the
-[result frequency graphs](http://{host-nodeB}:7998/frequency-graphs.html).
+"""Allocate a radio and run the monitor.
 """
 
 # Import the Portal object.
 import geni.portal as portal
 # Import the ProtoGENI library.
 import geni.rspec.pg as pg
+import geni.rspec.igext as ig
 # Import the emulab extensions library.
 import geni.rspec.emulab
+
+#
+# Setup the Tour info. We will add instructions below.
+#  
+tour = ig.Tour()
+tour.Description(ig.Tour.TEXT, "Allocate an radio and run the monitor.");
 
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
 ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
@@ -139,6 +142,18 @@ if params.runCount > 1:
     COMMAND += " -c " + str(params.runCount);
     pass
 node.addService(pg.Execute(shell="sh", command=COMMAND))
+
+#
+# Added instructions.
+#
+if params.WebSave:
+    tour.Instructions(ig.Tour.MARKDOWN,
+                      "If you have enabled the __Local Web Server__ then " +
+                      "you can browse the [result frequency graphs]" +
+                      "(http://{host-" + node.name + "}:7998/" +
+                      "frequency-graphs.html).");
+    pass
+request.addTour(tour)
 
 # Final rspec.
 pc.printRequestRSpec(request)
