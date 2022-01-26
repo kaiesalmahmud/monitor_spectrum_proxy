@@ -360,6 +360,9 @@ sub ProbeB210()
     #
     # Create the config file.
     #
+    system("sudo /bin/rm -f /tmp/device.cnf")
+	if (-e "/tmp/device.cnf");
+    
     open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
     print CONFIG "{ \"devices\" : { \"${nodeID}:rf0\" : ".
@@ -441,6 +444,8 @@ sub ProbeX310()
     if ($radioID =~ /cbrs/i) {
 	$antenna = "TX/RX";
     }
+    system("sudo /bin/rm -f /tmp/device.cnf")
+	if (-e "/tmp/device.cnf");
     
     open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
