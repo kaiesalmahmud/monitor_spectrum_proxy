@@ -131,7 +131,7 @@ if params.WebSave:
     COMMAND += " -W"
     pass
 if params.runCount > 1:
-    COMMAND += " -c " + params.runCount;
+    COMMAND += " -c " + str(params.runCount);
     pass
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 
