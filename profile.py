@@ -13,7 +13,7 @@ import geni.rspec.emulab
 # Setup the Tour info. We will add instructions below.
 #  
 tour = ig.Tour()
-tour.Description(ig.Tour.TEXT, "Allocate an radio and run the monitor.");
+tour.Description(ig.Tour.TEXT, "Allocate a radio and run the monitor.");
 
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
 ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
