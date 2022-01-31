@@ -7,6 +7,7 @@
 
 set -x
 
+DIRNAME=`dirname $0`
 OURDIR=/local
 WWWPUB=/local/www
 SUDO=sudo
@@ -60,7 +61,7 @@ $SUDO ln -s /etc/nginx/sites-available/profile-public \
       /etc/nginx/sites-enabled/profile-public
 
 # Populate the www dir from the repo.
-$SUDO -u $SWAPPER rsync -av /local/repository/www/ /local/www
+$SUDO -u $SWAPPER rsync -av $DIRNAME/www/ $WWWPUB
 
 sudo systemctl enable nginx
 sudo systemctl restart nginx
