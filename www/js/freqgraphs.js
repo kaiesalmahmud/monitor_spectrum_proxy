@@ -1119,10 +1119,7 @@ window.ShowFrequencyGraph = (function ()
 	    .removeClass("hidden");
 
 	$(args.selector + " .frequency-graph-nodeid")
-	    .html(info.node_id);
-
-	$(args.selector + " .frequency-graph-iface")
-	    .html(info.iface);
+	    .html(info.node_id + ":" + info.iface);
 
 	if (args.cluster) {
 	    $(args.selector + " .frequency-graph-cluster")
@@ -1154,7 +1151,7 @@ window.ShowFrequencyGraph = (function ()
 	 * possible with jquery ajax call, so we have to something
 	 * special.
 	 */
-	var url = args.url + "/";
+	var url = args.url + info.path + "/";
 	url = url + info.node_id + ":" + info.iface;
 	if (info.logid) {
 	    url = url + "-" + info.logid;
