@@ -145,6 +145,7 @@ if params.WebSave:
     if params.WebDup:
         COMMAND += " -D"
         pass
+    bs = node.Blockstore("bs", "/local/www")
     pass
 if params.runCount > 1:
     COMMAND += " -c " + str(params.runCount);
