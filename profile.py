@@ -61,7 +61,7 @@ pc.defineParameter("WebSave", "Local Web Server",
                    "start a web server to access them. See the instructions " +
                    "for more information")
 
-pc.defineParameter("WebDup", "Copy backresults",
+pc.defineParameter("WebDup", "Copy Back Results",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="With the Local Web Server option, also " +
                    "copy the data files back to the Portal for safe keeping.");
