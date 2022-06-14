@@ -21,12 +21,13 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:W";
+my $optlist     = "dniVr:t:c:WD";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
 my $websave     = 0;
+my $webdup      = 0;
 my $type;
 my $radioID;
 my $gain;
@@ -48,7 +49,8 @@ my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
 my $REBOOT      = "/usr/local/bin/node_reboot";
 my $IFACE       = "rf0";  # Someday we will be able to monitor others TXs
-my $SAVEDIR     = "$VARDIR/save";
+my $WBSTORE     = "$VARDIR/save";
+my $SAVEDIR     = $SAVEDIR;
 my $WEBDIR      = "/local/www";
 my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
@@ -99,6 +101,9 @@ if (defined($options{"V"})) {
 }
 if (defined($options{"W"})) {
     $websave = 1;
+    if (defined($options{"D"})) {
+	$webdup = 1;
+    }
 }
 if (defined($options{"t"})) {
     $type = $options{"t"};
@@ -278,7 +283,11 @@ while ($LOOPS) {
     }
     unlink($filename);
 
-    if (!$websave && $domain eq "emulab.net") {
+    # Duplicate
+    if ($websave && $webdup) {
+	system("/bin/cp $SAVEDIR/${name} $WBSTORE");
+    }
+    elsif (!$websave && $domain eq "emulab.net") {
 	my $mdir = "/proj/$pid/monitor";
 	if (! -e $mdir) {
 	    if (!mkdir($mdir, 0775)) {
