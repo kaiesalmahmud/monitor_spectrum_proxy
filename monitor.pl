@@ -21,7 +21,7 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD";
+my $optlist     = "dniVr:t:c:WD:";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
