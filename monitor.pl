@@ -27,7 +27,6 @@ my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
 my $websave     = 0;
-my $webdup      = 0;
 my $type;
 my $radioID;
 my $gain;
@@ -101,15 +100,15 @@ if (defined($options{"V"})) {
 }
 if (defined($options{"W"})) {
     $websave = 1;
-    if (defined($options{"D"})) {
-	$webdup = 1;
-    }
 }
 if (defined($options{"t"})) {
     $type = $options{"t"};
 }
 if (defined($options{"c"})) {
     $LOOPS = $options{"c"};
+}
+if (defined($options{"D"})) {
+    $LOOPDELAY = $options{"D"};
 }
 if (defined($options{"r"})) {
     $radioID = $options{"r"};
@@ -283,11 +282,7 @@ while ($LOOPS) {
     }
     unlink($filename);
 
-    # Duplicate
-    if ($websave && $webdup) {
-	system("/bin/cp $SAVEDIR/${name} $WBSTORE");
-    }
-    elsif (!$websave && $domain eq "emulab.net") {
+    if (!$websave && $domain eq "emulab.net") {
 	my $mdir = "/proj/$pid/monitor";
 	if (! -e $mdir) {
 	    if (!mkdir($mdir, 0775)) {

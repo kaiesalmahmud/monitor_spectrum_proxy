@@ -61,14 +61,14 @@ pc.defineParameter("WebSave", "Local Web Server",
                    "start a web server to access them. See the instructions " +
                    "for more information")
 
-pc.defineParameter("WebDup", "Copy Back Results",
-                   portal.ParameterType.BOOLEAN, False,
-                   longDescription="With the Local Web Server option, also " +
-                   "copy the data files back to the Portal for safe keeping.");
-
 # Number of loops to run.
 pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
                    longDescription="Number of times to run the monitor")
+# Loop interval
+pc.defineParameter("Interval", "Loop Interval",
+                   portal.ParameterType.STRING, "",
+                   longDescription="Loop interval, defaults to 60 seconds "
+                   "if you leave this blank.");
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
@@ -142,14 +142,15 @@ if params.NoRun:
     pass
 if params.WebSave:
     COMMAND += " -W"
-    if params.WebDup:
-        COMMAND += " -D"
-        pass
     bs = node.Blockstore("bs", "/local/www")
     pass
 if params.runCount > 1:
     COMMAND += " -c " + str(params.runCount);
     pass
+if params.Interval != "":
+    COMMAND += " -D " + str(params.Interval);
+    pass
+    
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 
 #
