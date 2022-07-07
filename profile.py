@@ -60,6 +60,12 @@ pc.defineParameter("WebSave", "Local Web Server",
                    longDescription="Save results to local directory and " +
                    "start a web server to access them. See the instructions " +
                    "for more information")
+# Daily subdirs.
+pc.defineParameter("SubDirs", "Per day subdirs",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="With a web server, store each day's " +
+                   "graphs in a sub directory named by the date, " +
+                   "instead of a giant flat list of files");
 
 # Number of loops to run.
 pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
@@ -142,6 +148,9 @@ if params.NoRun:
     pass
 if params.WebSave:
     COMMAND += " -W"
+    if params.SubDirs:
+        COMMAND += " -S"
+        pass
     bs = node.Blockstore("bs", "/local/www")
     pass
 if params.runCount > 1:
