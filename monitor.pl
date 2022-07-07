@@ -7,7 +7,7 @@ use Data::Dumper;
 use Getopt::Std;
 use File::Temp qw(tempfile);
 use File::Basename;
-use POSIX qw(isatty setsid);
+use POSIX qw(isatty setsid strftime);
 
 # Drag in path stuff so we can find emulab stuff.
 BEGIN { require "/etc/emulab/paths.pm"; import emulabpaths; }
@@ -21,12 +21,13 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:";
+my $optlist     = "dniVr:t:c:WD:S";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
 my $websave     = 0;
+my $dosubdir    = 0;
 my $type;
 my $radioID;
 my $gain;
@@ -100,6 +101,9 @@ if (defined($options{"V"})) {
 }
 if (defined($options{"W"})) {
     $websave = 1;
+    if (defined($options{"S"})) {
+	$dosubdir = 1;
+    }
 }
 if (defined($options{"t"})) {
     $type = $options{"t"};
@@ -266,6 +270,25 @@ while ($LOOPS) {
 
     if ($websave) {
 	$SAVEDIR = $WEBDIR;
+
+	#
+	# In subdir mode we are going to store the file in a subdir named
+	# by the day so we do not end up a directory with 1000s of files
+	# in it (and a dropdown menu with 1000s of items). 
+	#
+	if ($dosubdir) {
+	    my $subdir = POSIX::strftime("20%y-%m-%d", localtime($now));
+	    $SAVEDIR .= "/" . $subdir;
+
+	    if (! -e $SAVEDIR) {
+		if (! mkdir($SAVEDIR, 0775)) {
+		    fatal("Could not mkdir $SAVEDIR: $!");
+		}
+		if (! chmod(0775, $SAVEDIR)) {
+		    fatal("Could not chmod $SAVEDIR to 0775: $!");
+		}
+	    }
+	}
     }
     elsif ($domain eq "emulab.net") {
 	#

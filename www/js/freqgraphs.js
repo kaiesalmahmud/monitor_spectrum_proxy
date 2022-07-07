@@ -941,7 +941,7 @@ window.ShowFrequencyGraph = (function ()
 		    if (a.name > b.name) {return 1;}		    
 		    return 0;
 		});
-		_.each(dirs, function(info) {
+		_.each(dirs.reverse(), function(info) {
 		    var item =
 			$("<li class='multilevel-menu-parent'>" +
 			  "  <a href='#'>" + info.name + "</a>" +
@@ -995,8 +995,8 @@ window.ShowFrequencyGraph = (function ()
 			}
 		    }
 		    // Latest graph will be shown if nothing else.
-		    if (dirname != "archive" && 
-			(!latest || info.latest > latest.logid)) {
+		    if (!_.has(info, "subdir") &&
+			(!latest || info.logid > latest.logid)) {
 			latest = info;
 		    }
 		});
@@ -1188,8 +1188,65 @@ window.ShowFrequencyGraph = (function ()
 		});
     }
 
+    /*
+     * Handle the Share button popup.
+     */
+    function Share(args)
+    {
+	var selector = args.selector + ' .share-button';
+	var url = $(selector).data("graphurl");
+	var id = "xxxyyy";
+	var input = id + "-url-input";
+	var copy  = id + "-url-copy";
+	
+	var popupstring = 
+	    "<div style='width 100%'> "+
+	    "  <input readonly type=text " +
+	    "       id='" + input + "' " +
+	    "       style='display:inline; width: 93%; padding: 2px;' " +
+	    "       class='form-control input-sm' " +
+	    "       value='" + url + "'>" +
+	    "  <a href='#' class='btn' " +
+	    "     id='" + copy + "' " +
+	    "     style='padding: 0px'>" +
+	    "    <span class='glyphicon glyphicon-copy'></span></a></div>";
+	
+	if ($("#" + input).length == 0) {
+	    $(selector).popover({
+		html:     true,
+		content:  popupstring,
+		trigger:  'manual',
+		placement:'auto',
+		container:'body',
+	    });
+	    $(selector).popover('show');
+	    $('#' + copy).click(function (e) {
+		e.preventDefault();
+		$('#' + input).select();
+		document.execCommand("copy");
+		$(selector).popover('destroy');
+	    });
+	    $('#' + input).click(function (e) {
+		e.preventDefault();
+		$(selector).popover('destroy');
+	    });
+	}
+	else {
+	    $(selector).popover('destroy');
+	}
+    }
+
     return function(args) {
 	BuildMenu(args);
+
+	// This activates the popover subsystem.
+	$('[data-toggle="popover"]').popover({
+	    trigger: 'hover',
+	    placement: 'auto',
+	});
+	$(args.selector + ' .share-button').click(function (e) {
+	    Share(args);
+	});
     };
 }
 )();

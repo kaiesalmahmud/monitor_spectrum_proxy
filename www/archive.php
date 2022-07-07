@@ -22,11 +22,11 @@
 # }}}
 #
 
-$filename = 'monitor-' . date(DATE_ATOM) . ".tar.gz";
+$filename = 'monitor-' . date(DATE_ATOM) . ".tar";
 
-header("Content-Type: application/x-tgz");
+header("Content-Type: application/x-tar");
 header('Content-Disposition: attachment; filename="' . $filename . '"');
-$cmd = "tar -cz *.gz";
+$cmd = "tar -c 20*";
 
 passthru($cmd);
 exit(0);
