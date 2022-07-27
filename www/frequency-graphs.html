@@ -78,6 +78,11 @@
      svg {
 	 display: block;
      }
+     .popover
+     {
+	 min-width: 400px !important;
+     }
+
     </style>
     <div class="frequency-graph-div col-sm-12" style="margin-top: 10px">
       <div class="input-group input-group-sm col-sm-2 pull-left frequency-search">
@@ -104,8 +109,18 @@
       <a type='button'
 	 href="archive.php"
 	 style="margin-right: 10px"
+	 data-toggle='popover'
+	 data-html='true'
+	 data-delay='{"hide":500}'
+	 data-content='Archive the entire data directory, saving it to a
+		       tar file on your local drive. This might be
+		       a VERY BIG file, so beware.'
 	 class='btn btn-default btn-xs archive-button pull-right'>
 	Archive</a>
+      <a type='button' disabled
+	 style="margin-right: 10px"
+	 class='btn btn-default btn-xs share-button pull-right'>
+	Share</a>
       <center>
 	<h4>
 	  <span class="frequency-graph-cluster"></span>

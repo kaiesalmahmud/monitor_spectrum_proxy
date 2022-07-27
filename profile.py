@@ -60,10 +60,21 @@ pc.defineParameter("WebSave", "Local Web Server",
                    longDescription="Save results to local directory and " +
                    "start a web server to access them. See the instructions " +
                    "for more information")
+# Daily subdirs.
+pc.defineParameter("SubDirs", "Per day subdirs",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="With a web server, store each day's " +
+                   "graphs in a sub directory named by the date, " +
+                   "instead of a giant flat list of files");
 
 # Number of loops to run.
 pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
                    longDescription="Number of times to run the monitor")
+# Loop interval
+pc.defineParameter("Interval", "Loop Interval",
+                   portal.ParameterType.STRING, "",
+                   longDescription="Loop interval, defaults to 60 seconds "
+                   "if you leave this blank.");
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
@@ -137,10 +148,18 @@ if params.NoRun:
     pass
 if params.WebSave:
     COMMAND += " -W"
+    if params.SubDirs:
+        COMMAND += " -S"
+        pass
+    bs = node.Blockstore("bs", "/local/www")
     pass
 if params.runCount > 1:
     COMMAND += " -c " + str(params.runCount);
     pass
+if params.Interval != "":
+    COMMAND += " -D " + str(params.Interval);
+    pass
+    
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 
 #

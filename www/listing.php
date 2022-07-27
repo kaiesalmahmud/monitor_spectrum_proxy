@@ -1,6 +1,6 @@
 <?php
 #
-# Copyright (c) 2000-2022 University of Utah and the Flux Group.
+# Copyright (c) 2000-2020 University of Utah and the Flux Group.
 # 
 # {{{EMULAB-LICENSE
 # 
@@ -21,43 +21,50 @@
 # 
 # }}}
 #
-$listing = array();
-
-function getFileList($archive)
+function getFileList($dir)
 {
-    global $listing;
-    $dir = ($archive ? "./archive" : ".");
+    $listing = array();
+    chdir($dir);
 
     // open pointer to directory and read list of files
-    $d = dir($dir);
+    $d = dir(".");
     if (!$d) {
         exit("Failed to open $dir for reading");
     }
     while (($entry = $d->read()) !== FALSE) {
+        if (is_dir($entry)) {
+            if ($entry == "archive" || preg_match("/^20\d\d\-/", $entry)) {
+                $listing[] = [
+                    'name'     => $entry,
+                    'subdir'   => getFileList($entry),
+                ];
+            }
+            continue;
+        }
+        #
+        # Ignore the symlinks, we want just the stamped entries.
+        #
+        if (is_link($entry)) {
+            continue;
+        }
         #
         # Only the .gz files
         #
         if (!preg_match("/\.gz$/", $entry)) {
             continue;
         }
-        #
-        # And only the time stamped ones, ignore the symlinks
-        #
-        if (is_link($entry)) {
-            continue;
-        }
         $listing[] = [
             'name'     => $entry,
-            'lastmod'  => filemtime("${dir}/${entry}"),
-            'archived' => $archive,
+            'lastmod'  => filemtime($entry),
         ];
-    }        
+    }
     $d->close();
+    if ($dir != ".") {
+        chdir("..");
+    }
+    return $listing;
 }
-getFileList(0);
-if (is_readable("archive")) {
-    getFileList(1);
-}
+$listing = getFileList(".");
 
 header("Content-Type: text/plain");
 header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
