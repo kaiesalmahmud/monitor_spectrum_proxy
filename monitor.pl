@@ -7,7 +7,7 @@ use Data::Dumper;
 use Getopt::Std;
 use File::Temp qw(tempfile);
 use File::Basename;
-use POSIX qw(isatty setsid);
+use POSIX qw(isatty setsid strftime);
 
 # Drag in path stuff so we can find emulab stuff.
 BEGIN { require "/etc/emulab/paths.pm"; import emulabpaths; }
@@ -21,18 +21,21 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:";
+my $optlist     = "dniVr:t:c:WD:S";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
-my $type        = "B210";
+my $websave     = 0;
+my $dosubdir    = 0;
+my $type;
 my $radioID;
 my $gain;
 my $CONFIG      = "/etc/rfmonitor/device_config.json";
 my $LOGFILE     = "/tmp/monitor.$$";
-my $REPO        = "/local/repository";
+my $REPO        = dirname($PROGRAM_NAME);
 my $INSTALL     = "$REPO/install.sh";
+my $INSTALLNGINX= "$REPO/install-nginx.sh";
 my $MONITOR     = "/usr/bin/rfmonitor";
 my $MONITORETC  = "/etc/rfmonitor";
 my $TAR         = "/bin/tar";
@@ -46,7 +49,9 @@ my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
 my $REBOOT      = "/usr/local/bin/node_reboot";
 my $IFACE       = "rf0";  # Someday we will be able to monitor others TXs
-my $SAVEDIR     = "$VARDIR/save";
+my $WBSTORE     = "$VARDIR/save";
+my $SAVEDIR     = $WBSTORE;
+my $WEBDIR      = "/local/www";
 my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
@@ -94,8 +99,20 @@ if (defined($options{"n"})) {
 if (defined($options{"V"})) {
     $viewer = 1;
 }
+if (defined($options{"W"})) {
+    $websave = 1;
+    if (defined($options{"S"})) {
+	$dosubdir = 1;
+    }
+}
 if (defined($options{"t"})) {
     $type = $options{"t"};
+}
+if (defined($options{"c"})) {
+    $LOOPS = $options{"c"};
+}
+if (defined($options{"D"})) {
+    $LOOPDELAY = $options{"D"};
 }
 if (defined($options{"r"})) {
     $radioID = $options{"r"};
@@ -110,10 +127,6 @@ if (! -t || ($viewer && !$debug)) {
 	die("opening $LOGFILE for STDOUT: $!");
     open(STDERR, ">> $LOGFILE") or
 	die("opening $LOGFILE for STDERR: $!");
-}
-
-if ($type ne "B210" && !defined($radioID)) {
-    fatal("Must provide radio node ID with the -r option");
 }
 
 # We need the node ID for the output files.
@@ -151,20 +164,45 @@ if (! -e "$HOME/.ssl/emulab.pem") {
 }
 
 # Install the monitor packages.
-if (!$noinstall && ! -e "$MONITORETC/.ready") {
-    system($INSTALL);
-    if ($?) {
-	fatal("Could not install the monitor");
-    }
+if (!$noinstall) {
     if (! -e "$MONITORETC/.ready") {
-	fatal("Monitor did not install properly");
+	system($INSTALL);
+	if ($?) {
+	    fatal("Could not install the monitor");
+	}
+	if (! -e "$MONITORETC/.ready") {
+	    fatal("Monitor did not install properly");
+	}
+    }
+    if ($websave && ! -e "/local/nginx-done") {
+	system($INSTALLNGINX);
+	if ($?) {
+	    fatal("Could not install nginx");
+	}
+	if (! -e "/local/nginx-done") {
+	    fatal("nginx did not install properly");
+	}
     }
 }
 
+#
+# Infer the type from node id. Fragile.
+#
+if (!defined($type)) {
+    if ($nodeID =~ /nuc/ || $nodeID =~ /^ed\d+/) {
+	$type = "B210";
+    }
+    else {
+	$type = "X310";
+    }
+}
 if ($type eq "B210") {
     ProbeB210();
 }
 elsif ($type eq "X310") {
+    if (!defined($radioID)) {
+	fatal("Must provide radio node ID with the -r option");
+    }
     ProbeX310();
 }
 else {
@@ -212,7 +250,7 @@ while ($LOOPS) {
 	if (!$headered) {
 	    print $fp "frequency,power";
 	    if (defined($center)) {
-		printf $fp ",center_freq", $center;
+		printf $fp ",center_freq";
 	    }
 	    print $fp "\n";
 	    $headered = 1;
@@ -229,12 +267,35 @@ while ($LOOPS) {
     }
     my $now  = time();
     my $name = "${ID}:rf0-${now}.csv.gz";
-    #
-    # Ick, if we are running on the Mothership, have to write the file into
-    # /proj instead of wbstore. Lets create a tar file that looks like the
-    # wbstore file and has a known name.
-    #
-    if ($domain eq "emulab.net") {
+
+    if ($websave) {
+	$SAVEDIR = $WEBDIR;
+
+	#
+	# In subdir mode we are going to store the file in a subdir named
+	# by the day so we do not end up a directory with 1000s of files
+	# in it (and a dropdown menu with 1000s of items). 
+	#
+	if ($dosubdir) {
+	    my $subdir = POSIX::strftime("20%y-%m-%d", localtime($now));
+	    $SAVEDIR .= "/" . $subdir;
+
+	    if (! -e $SAVEDIR) {
+		if (! mkdir($SAVEDIR, 0775)) {
+		    fatal("Could not mkdir $SAVEDIR: $!");
+		}
+		if (! chmod(0775, $SAVEDIR)) {
+		    fatal("Could not chmod $SAVEDIR to 0775: $!");
+		}
+	    }
+	}
+    }
+    elsif ($domain eq "emulab.net") {
+	#
+	# Ick, if we are running on the Mothership, have to write the file into
+	# /proj instead of wbstore. Lets create a tar file that looks like the
+	# wbstore file and has a known name.
+	#
 	$SAVEDIR = "/proj/$pid/exp/$eid";
     }
     print "Writing file to $SAVEDIR/$name\n";
@@ -243,7 +304,8 @@ while ($LOOPS) {
 	fatal("Could not gzip data into the save directory.");
     }
     unlink($filename);
-    if ($domain eq "emulab.net") {
+
+    if (!$websave && $domain eq "emulab.net") {
 	my $mdir = "/proj/$pid/monitor";
 	if (! -e $mdir) {
 	    if (!mkdir($mdir, 0775)) {
@@ -266,6 +328,9 @@ while ($LOOPS) {
     $LOOPS--;
     sleep($LOOPDELAY)    
 	if ($LOOPS);
+}
+if ($websave) {
+    system("/bin/touch $WEBDIR/DONE");
 }
 Notify("Worked") if ($debug);
 exit(0);
@@ -322,6 +387,9 @@ sub ProbeB210()
     #
     # Create the config file.
     #
+    system("sudo /bin/rm -f /tmp/device.cnf")
+	if (-e "/tmp/device.cnf");
+    
     open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
     print CONFIG "{ \"devices\" : { \"${nodeID}:rf0\" : ".
@@ -403,6 +471,8 @@ sub ProbeX310()
     if ($radioID =~ /cbrs/i) {
 	$antenna = "TX/RX";
     }
+    system("sudo /bin/rm -f /tmp/device.cnf")
+	if (-e "/tmp/device.cnf");
     
     open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
