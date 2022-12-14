@@ -1,4 +1,4 @@
-"""Allocate a radio and run the monitor.
+"""Allocate a radio and run the monitor. Comment
 """
 
 # Import the Portal object.
@@ -8,6 +8,9 @@ import geni.rspec.pg as pg
 import geni.rspec.igext as ig
 # Import the emulab extensions library.
 import geni.rspec.emulab
+#
+# Comment
+#
 
 #
 # Setup the Tour info. We will add instructions below.
