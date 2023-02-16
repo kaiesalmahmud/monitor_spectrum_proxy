@@ -48,6 +48,7 @@ my $LOADER      = "/usr/bin/uhd_image_loader";
 my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
 my $REBOOT      = "/usr/local/bin/node_reboot";
+my $NOTIFYSLACK = "/usr/local/bin/notifyslack"; 
 my $IFACE       = "rf0";  # Someday we will be able to monitor others TXs
 my $WBSTORE     = "$VARDIR/save";
 my $SAVEDIR     = $WBSTORE;
@@ -55,6 +56,7 @@ my $WEBDIR      = "/local/www";
 my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
+my $slacked     = 0;
 
 #
 # HOME will not be defined until new images are built.
@@ -263,8 +265,16 @@ while ($LOOPS) {
     }
     close($fp);
     if (!close(MON)) {
+	if ($websave) {
+	    if ($slacked == 0 || time() - $slacked > (12 * 3600)) {
+		system("$NOTIFYSLACK 'Monitor failed'");
+		$slacked = time();
+	    }
+	    goto skip;
+	}
 	fatal("Error running the monitor");
     }
+    $slacked = 0;
     my $now  = time();
     my $name = "${ID}:rf0-${now}.csv.gz";
 
@@ -325,6 +335,7 @@ while ($LOOPS) {
 	    fatal("Could not move dopey tar file into place");
 	}
     }
+  skip:
     $LOOPS--;
     sleep($LOOPDELAY)    
 	if ($LOOPS);

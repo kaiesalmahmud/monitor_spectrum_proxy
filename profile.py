@@ -19,6 +19,7 @@ IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
 ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 COMMAND   = "/local/repository/monitor.pl"
+POWDERREPO= "powder"
 
 #
 # Two types of situations; B210 directly connected, and X310 ethernet connected.
@@ -80,6 +81,12 @@ pc.defineParameter("Interval", "Loop Interval",
 pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="Install but do not run the monitor")
+
+# For testing,
+pc.defineParameter("TestRepo", "Powder Repo",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="For testing only, use powder-testing "
+                   "local repo");
 
 params = pc.bindParameters()
 
@@ -159,7 +166,11 @@ if params.runCount > 1:
 if params.Interval != "":
     COMMAND += " -D " + str(params.Interval);
     pass
-    
+
+if params.TestRepo:
+    COMMAND = "POWDERREPO=powder-testing; " + COMMAND
+    pass
+
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 
 #
