@@ -83,7 +83,7 @@ pc.defineParameter("NoRun", "Install Only",
                    longDescription="Install but do not run the monitor")
 
 # For testing,
-pc.defineParameter("TestRepo", "Powder Repo",
+pc.defineParameter("TestRepo", "Test Repo",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="For testing only, use powder-testing "
                    "local repo");
