@@ -120,7 +120,7 @@ if (defined($options{"r"})) {
     $radioID = $options{"r"};
 }
 if (defined($options{"T"})) {
-    $ENV{"POWDERREPO"} = "powder-test";
+    $ENV{"POWDERREPO"} = "powder-testing";
 }
 
 #
