@@ -19,7 +19,6 @@ IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
 ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 COMMAND   = "/local/repository/monitor.pl"
-POWDERREPO= "powder"
 
 #
 # Two types of situations; B210 directly connected, and X310 ethernet connected.
@@ -153,6 +152,9 @@ node.startVNC()
 if params.NoRun:
     COMMAND += " -n"
     pass
+if params.TestRepo:
+    COMMAND += " -T"
+    pass
 if params.WebSave:
     COMMAND += " -W"
     if params.SubDirs:
@@ -165,10 +167,6 @@ if params.runCount > 1:
     pass
 if params.Interval != "":
     COMMAND += " -D " + str(params.Interval);
-    pass
-
-if params.TestRepo:
-    COMMAND = "POWDERREPO=powder-testing; " + COMMAND
     pass
 
 node.addService(pg.Execute(shell="sh", command=COMMAND))

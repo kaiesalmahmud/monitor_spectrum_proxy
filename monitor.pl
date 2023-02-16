@@ -21,7 +21,7 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:S";
+my $optlist     = "dniVr:t:c:WD:ST";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
@@ -118,6 +118,9 @@ if (defined($options{"D"})) {
 }
 if (defined($options{"r"})) {
     $radioID = $options{"r"};
+}
+if (defined($options{"T"})) {
+    $ENV{"POWDERREPO"} = "powder-test";
 }
 
 #

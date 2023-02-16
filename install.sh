@@ -10,7 +10,8 @@ fi
 
 RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
 
-REPO="powder"
+POWDERREPO=${POWDERREPO:-"powder"}
+REPO=$POWDERREPO
 
 # WTF! The tabs before priority actually matter.
 echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
