@@ -15,7 +15,7 @@ import geni.rspec.emulab
 tour = ig.Tour()
 tour.Description(ig.Tour.TEXT, "Allocate a radio and run the monitor.");
 
-IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
+IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GR310"
 ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 COMMAND   = "/local/repository/monitor.pl"

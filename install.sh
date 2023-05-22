@@ -10,6 +10,15 @@ fi
 
 RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
 
+#
+# New stuff from David for UBUNTU22
+#
+MAJOR=`. /etc/lsb-release ; echo $DISTRIB_RELEASE | cut -d= -f2 | cut -d. -f1`
+if [ -n "$MAJOR" -a $MAJOR -gt 18 ]; then
+    sudo add-apt-repository -y ppa:ettusresearch/uhd
+    sudo add-apt-repository -y ppa:gnuradio/gnuradio-releases
+fi
+
 POWDERREPO=${POWDERREPO:-"powder"}
 REPO=$POWDERREPO
 
@@ -52,7 +61,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Ick
-sudo sed -i.bak -e 's/join(req_args, ",")/join(",", req_args)/' /usr/local/bin/script_wrapper.py
+sudo sed -i.bak -e 's/join(req_args, ",")/join(",", req_args)/' /usr/bin/script_wrapper.py
 
 #
 # Marker that says we completed the install. In case we have to power
