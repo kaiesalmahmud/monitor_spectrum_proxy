@@ -244,7 +244,7 @@ while ($LOOPS) {
 	fatal("Could not open a temporary file");
     }
     if (! open(MON, "$MONITOR -o -n -g $gain |")) {
-	fatal("Could not start ssh-keygen");
+	fatal("Could not start $MONITOR");
     }
     while (<MON>) {
 	if ($_ !~ /^${ID}/) {
