@@ -45,14 +45,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-tk python3-matplotlib socat tigervnc-standalone-server autocutsel fvwm sendmail-bin
+sudo apt-get -y install --no-install-recommends python3-rfmonitor rfmonitor-calibration python3-tk python3-matplotlib socat tigervnc-standalone-server autocutsel fvwm
 if [ $? -ne 0 ]; then
     echo 'apt-get install support failed'
     exit 1
 fi
 
 # Ick
-sudo sed -i.bak -e 's/join(req_args, ",")/join(",", req_args)/' /usr/bin/script_wrapper.py
+sudo sed -i.bak -e 's/join(req_args, ",")/join(",", req_args)/' /usr/local/bin/script_wrapper.py
 
 #
 # Marker that says we completed the install. In case we have to power
