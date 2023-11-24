@@ -71,9 +71,9 @@ pc.defineParameter("Gain", "Radio Gain",
                    "to 85 on B210s and 10 on X310s")
 
 # DST Endpoint
-pc.defineParameter("DST", "DST hostname",
+pc.defineParameter("DST", "DST URL",
                    portal.ParameterType.STRING, "",
-                   longDescription="DST hostname to send observations to")
+                   longDescription="DST URL to send observations to")
 
 # Auth Token
 pc.defineParameter("DSTAuth", "Authorization Token",
@@ -83,7 +83,7 @@ pc.defineParameter("DSTAuth", "Authorization Token",
 # Monitor ID,
 pc.defineParameter("DSTMonID", "ZMC Monitor ID",
                    portal.ParameterType.STRING, "",
-                   longDescription="MC Monitor ID")
+                   longDescription="ZMC Monitor ID")
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
