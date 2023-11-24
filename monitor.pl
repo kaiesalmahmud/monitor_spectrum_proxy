@@ -9,7 +9,6 @@ use File::Temp qw(tempfile);
 use File::Basename;
 use POSIX qw(isatty setsid strftime);
 use MIME::Base64;
-use JSON;
 
 # Drag in path stuff so we can find emulab stuff.
 BEGIN { require "/etc/emulab/paths.pm"; import emulabpaths; }
@@ -582,6 +581,7 @@ sub UploadObservation($)
     my $min_freq;
     my $max_freq;
     my $data;
+    require JSON; 
     
     if (open(DATA, $filename)) {
 	# Header
@@ -630,7 +630,7 @@ sub UploadObservation($)
 	exec($command);
 	die("UploadObservation: exec failed\n");
     }
-    eval { print PIPE encode_json($request); };
+    eval { print PIPE JSON::encode_json($request); };
     if ($@) {
 	print STDERR $@;
     }
