@@ -8,6 +8,8 @@ use Getopt::Std;
 use File::Temp qw(tempfile);
 use File::Basename;
 use POSIX qw(isatty setsid strftime);
+use MIME::Base64;
+use JSON;
 
 # Drag in path stuff so we can find emulab stuff.
 BEGIN { require "/etc/emulab/paths.pm"; import emulabpaths; }
@@ -21,7 +23,7 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:ST";
+my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
@@ -47,6 +49,7 @@ my $CACHE       = "https://www.emulab.net/downloads/ettus/binaries/cache";
 my $LOADER      = "/usr/bin/uhd_image_loader";
 my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
+my $CURL        = "/usr/bin/curl";
 my $REBOOT      = "/usr/local/bin/node_reboot";
 my $NOTIFYSLACK = "/usr/local/bin/notifyslack"; 
 my $IFACE       = "rf0";  # Someday we will be able to monitor others TXs
@@ -57,6 +60,9 @@ my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
 my $slacked     = 0;
++my $DST;
++my $DSTAUTH;
++my $DSTMONID;
 
 #
 # HOME will not be defined until new images are built.
@@ -78,6 +84,7 @@ sub ProbeX310();
 sub DownLoadImages($);
 sub fatal($);
 sub Notify($);
+sub UploadObservation($);
 
 # For SENDMAIL
 use libtestbed;
@@ -112,6 +119,10 @@ if (defined($options{"t"})) {
 }
 if (defined($options{"c"})) {
     $LOOPS = $options{"c"};
+    if ($LOOPS == 0) {
+	# Loop forever
+	$LOOPS = 99999999;
+    }
 }
 if (defined($options{"D"})) {
     $LOOPDELAY = $options{"D"};
@@ -121,6 +132,20 @@ if (defined($options{"r"})) {
 }
 if (defined($options{"T"})) {
     $ENV{"POWDERREPO"} = "powder-testing";
+}
+if (defined($options{"g"})) {
+    $gain = $options{"g"};
+}
+if (defined($options{"Z"})) {
+    $DST = $options{"Z"};
+    if (!exists($options{"A"})) {
+	fatal("Need -A argument with -Z");
+    }
+    if (!exists($options{"I"})) {
+	fatal("Need -I argument with -Z");
+    }
+    $DSTAUTH  = $options{"A"};
+    $DSTMONID = $options{"I"};
 }
 
 #
@@ -270,13 +295,22 @@ while ($LOOPS) {
     if (!close(MON)) {
 	if ($websave) {
 	    if ($slacked == 0 || time() - $slacked > (12 * 3600)) {
-		system("$NOTIFYSLACK 'Monitor failed'");
+#		system("$NOTIFYSLACK 'Monitor failed'");
 		$slacked = time();
 	    }
 	    goto skip;
 	}
 	fatal("Error running the monitor");
     }
+    #
+    # RDZ case
+    #
+    if (defined($DST)) {
+	UploadObservation($filename);
+	unlink($filename);
+	goto skip;
+    }
+    
     $slacked = 0;
     my $now  = time();
     my $name = "${ID}:rf0-${now}.csv.gz";
@@ -415,7 +449,7 @@ sub ProbeB210()
 	fatal("Could not copy new file to $CONFIG");
     }
     # Default gain for B210s
-    $gain = 85;
+    $gain = 85 if (!defined($gain));
     return 0;
 }
 
@@ -500,7 +534,7 @@ sub ProbeX310()
 	fatal("Could not copy new file to $CONFIG");
     }
     # Default gain for X310s
-    $gain = 10;
+    $gain = 10 if (!defined($gain));
 }
 
 sub Notify($)
@@ -536,6 +570,71 @@ sub DownLoadImages($)
 	    if ($?);
     }
     return 0;
+}
+
+#
+# RDZ
+#
+sub UploadObservation($)
+{
+    my ($filename) = @_;
+    my $stamp   = POSIX::strftime("20%y-%m-%dT%H:%M:%SZ", gmtime(time()));
+    my $min_freq;
+    my $max_freq;
+    my $data;
+    
+    if (open(DATA, $filename)) {
+	# Header
+	$data = <DATA>;
+	# First line to get min freq.
+	my $line = <DATA>;
+	$data .= $line;
+	($min_freq) = split(",", $line);
+	while (<DATA>) {
+	    $line = $_;
+	    $data .= $line;
+	}
+	# Last line to get max freq.
+	($max_freq) = split(",", $line);
+	close(DATA);
+    }
+    else {
+	fatal("Could not open $filename: $!");
+    } 
+    my $request = {
+	"monitor_id"  => $DSTMONID,
+	"types"       => "inline,sweep",
+	"format"      => "psd-csv-inline",
+	"min_freq"    => $min_freq * 1000000,
+	"max_freq"    => $max_freq * 1000000,
+	"starts_at"   => $stamp,
+    };
+    print Dumper($request);
+    $request->{'data'} = encode_base64($data);
+
+    my $command = "$CURL -k -X POST -H 'X-Api-Token: $DSTAUTH' " .
+	"-d \@- $DST/observations";
+
+    print "$command\n";
+
+    #
+    # Pipe the json encoded request into curl.
+    #
+    my $pid = open(PIPE, "|-");
+    if (!defined($pid)) {
+	print STDERR "UploadObservation; popen failed!\n";
+	return;
+    }
+    if (!$pid) {
+	open(STDERR, ">&STDOUT");
+	exec($command);
+	die("UploadObservation: exec failed\n");
+    }
+    eval { print PIPE encode_json($request); };
+    if ($@) {
+	print STDERR $@;
+    }
+    close(PIPE);
 }
 
 my $exiting = 0;
