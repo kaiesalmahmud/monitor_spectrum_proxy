@@ -59,9 +59,9 @@ my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
 my $slacked     = 0;
-+my $DST;
-+my $DSTAUTH;
-+my $DSTMONID;
+my $DST;
+my $DSTAUTH;
+my $DSTMONID;
 
 #
 # HOME will not be defined until new images are built.
