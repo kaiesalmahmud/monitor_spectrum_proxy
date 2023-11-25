@@ -62,6 +62,7 @@ my $slacked     = 0;
 my $DST;
 my $DSTAUTH;
 my $DSTMONID;
+my $RANGE;
 
 #
 # HOME will not be defined until new images are built.
@@ -145,6 +146,9 @@ if (defined($options{"Z"})) {
     }
     $DSTAUTH  = $options{"A"};
     $DSTMONID = $options{"I"};
+}
+if (defined($options{"R"})) {
+    $RANGE = $options{"R"};
 }
 
 #
@@ -262,12 +266,13 @@ if ($viewer) {
 while ($LOOPS) {
     my $headered = 0;
     my $ID = ($type eq "B210" ? $nodeID : $radioID);
+    my $opt = (defined($RANGE) ? "-R '$RANGE'" : "");
     
     my ($fp, $filename) = tempfile(UNLINK => 0);
     if (!$fp) {
 	fatal("Could not open a temporary file");
     }
-    if (! open(MON, "$MONITOR -o -n -g $gain |")) {
+    if (! open(MON, "$MONITOR -o -n -g $gain $opt |")) {
 	fatal("Could not start ssh-keygen");
     }
     while (<MON>) {

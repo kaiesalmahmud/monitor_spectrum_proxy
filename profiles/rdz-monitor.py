@@ -70,6 +70,12 @@ pc.defineParameter("Gain", "Radio Gain",
                    longDescription="Radio gain. If you leave blank, defaults "+
                    "to 85 on B210s and 10 on X310s")
 
+# Range to monitor
+pc.defineParameter("Range", "Frequency Range",
+                   portal.ParameterType.STRING, "",
+                   longDescription="Frequency range to scan. If you leave "+
+                   "blank, defaults to 100e6-6e9")
+
 # DST Endpoint
 pc.defineParameter("DST", "DST URL",
                    portal.ParameterType.STRING, "",
@@ -177,6 +183,9 @@ if params.DST != "":
     COMMAND += " -Z '" + str(params.DST) + "'"
     COMMAND += " -A '" + str(params.DSTAuth) + "'"
     COMMAND += " -I '" + str(params.DSTMonID) + "'"
+    pass
+if params.Range != "":
+    COMMAND += " -R '" + str(params.Range) + "'"
     pass
 
 node.addService(pg.Execute(shell="sh", command=COMMAND))
