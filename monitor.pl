@@ -615,7 +615,9 @@ sub UploadObservation($)
 	"starts_at"   => $stamp,
     };
     print Dumper($request);
-    $request->{'data'} = encode_base64($data);
+    $data = encode_base64($data);
+    $data =~ s/\\n/\n/mg;
+    $request->{'data'} = $data
 
     my $command = "$CURL -k -X POST -H 'X-Api-Token: $DSTAUTH' " .
 	"-d \@- $DST/observations";
