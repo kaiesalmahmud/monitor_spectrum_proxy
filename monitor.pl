@@ -616,12 +616,10 @@ sub UploadObservation($)
     };
     print Dumper($request);
     $data = encode_base64($data);
-    $data =~ s/\\n/\n/mg;
-    $request->{'data'} = $data
+    $request->{'data'} = $data;
 
     my $command = "$CURL -k -X POST -H 'X-Api-Token: $DSTAUTH' " .
 	"-d \@- $DST/observations";
-
     print "$command\n";
 
     #
@@ -637,10 +635,12 @@ sub UploadObservation($)
 	exec($command);
 	die("UploadObservation: exec failed\n");
     }
-    eval { print PIPE JSON::encode_json($request); };
+    my $jsonstr = eval { JSON::encode_json($request); };
     if ($@) {
 	print STDERR $@;
     }
+    $jsonstr =~ s/\\n//mg;
+    print PIPE $jsonstr;
     close(PIPE);
 }
 
