@@ -642,6 +642,7 @@ sub UploadObservation($)
     $jsonstr =~ s/\\n//mg;
     print PIPE $jsonstr;
     close(PIPE);
+    waitpid($pid, 0);
 }
 
 my $exiting = 0;
