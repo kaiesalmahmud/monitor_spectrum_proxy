@@ -608,8 +608,8 @@ sub UploadObservation($)
     } 
     my $request = {
 	"monitor_id"  => $DSTMONID,
-	"types"       => "inline,sweep",
-	"format"      => "psd-csv-inline",
+	"types"       => "ota,sweep",
+	"format"      => "psd-csv-ota",
 	"min_freq"    => $min_freq * 1000000,
 	"max_freq"    => $max_freq * 1000000,
 	"starts_at"   => $stamp,
