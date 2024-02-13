@@ -34,6 +34,119 @@ computeTypes = [
     ('d430', 'd430'),
     ('d820', 'd820'),
 ]
+# Default gains by RadioType.
+defaultGains = {
+    "B210" : 60,
+    "X310" : 15,
+}
+# All radio info
+allRadios = {
+    "Bookstore Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+bookstore.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1"
+    },
+    "Bookstore Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+bookstore.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "CPG Nuc1" : {    
+        "urn"  : 'urn:publicid:IDN+cpg.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "CPG Nuc2" : {    
+        "urn"  : 'urn:publicid:IDN+cpg.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "EBC Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+ebc.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "EBC Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+ebc.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "Guesthouse Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+guesthouse.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "Guesthouse Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+guesthouse.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "Humanities Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+humanities.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "Humanities Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+humanities.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "Law Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+law73.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "Law Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+law73.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "Madsen Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+madsen.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "Madsen Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+madsen.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "Moran Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+moran.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "Moran Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+moran.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "Sagepoint Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+sagepoint.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "Sagepoint Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+sagepoint.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+    "WEB Nuc1" : {
+        "urn"  : 'urn:publicid:IDN+web.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc1",
+    },
+    "WEB Nuc2" : {
+        "urn"  : 'urn:publicid:IDN+web.powderwireless.net+authority+cm',
+        "type" : "B210",
+        "node" : "nuc2",
+    },
+}
+# The Select list provides index into above dict.
+radioSelect = []
+for key in allRadios:
+    radioSelect.append((key, key))
+    pass
 
 # Create a portal context.
 pc = portal.Context()
@@ -41,18 +154,13 @@ pc = portal.Context()
 # Create a Request object to start building the RSpec. 
 request = pc.makeRequestRSpec()
 
-pc.defineParameter("Where", "Where",
-                   portal.ParameterType.STRING, ENDPOINT)
-
-pc.defineParameter("NodeID", "Node",
-                   portal.ParameterType.STRING, "nuc1")
-
-pc.defineParameter("Type", "Radio Type",
-                   portal.ParameterType.STRING, radioTypes[0], radioTypes)
+pc.defineParameter("Radio", "Radio",
+                   portal.ParameterType.STRING, radioSelect[0], radioSelect)
 
 pc.defineParameter("ComputeType", "Compute Type",
                    portal.ParameterType.STRING, computeTypes[0], computeTypes,
-                   longDescription="Select a type for X310 compute host")
+                   longDescription="Select a type for X310 compute host. " +
+                   "Defaults to the powder-compute soft type")
 
 # Number of loops to run.
 pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
@@ -68,11 +176,11 @@ pc.defineParameter("Interval", "Loop Interval",
 pc.defineParameter("Gain", "Radio Gain",
                    portal.ParameterType.STRING, "",
                    longDescription="Radio gain. If you leave blank, defaults "+
-                   "to 85 on B210s and 10 on X310s")
+                   "to 60 on B210s and 15 on X310s")
 
 # Range to monitor
 pc.defineParameter("Range", "Frequency Range",
-                   portal.ParameterType.STRING, "",
+                   portal.ParameterType.STRING, "3500e6-3750e6",
                    longDescription="Frequency range to scan. If you leave "+
                    "blank, defaults to 100e6-6e9")
 
@@ -105,13 +213,9 @@ pc.defineParameter("TestRepo", "Test Repo",
 params = pc.bindParameters()
 
 # Check parameter validity.
-if params.Where == "":
+if params.Radio == "":
     pc.reportError(portal.ParameterError(
-        "You must provide an aggregate.", ["Where"]))
-    pass
-if params.NodeID == "":
-    pc.reportError(portal.ParameterError(
-    "You must provide a node ID", ["NodeID"]))
+        "You must provide a radio", ["Radio"]))
     pass
 if params.runCount < 0:
     pc.reportError(portal.ParameterError(
@@ -120,27 +224,27 @@ if params.runCount < 0:
 
 pc.verifyParameters()
 
-if params.Type == "B210":
-    node = request.RawPC(params.NodeID)
-    node.component_id         = params.NodeID
-    node.component_manager_id = params.Where
+radioInfo = allRadios[params.Radio]
+radioType = radioInfo["type"]
+radioURN  = radioInfo["urn"]
+radioNode = radioInfo["node"]
+radioGain = defaultGains[radioType];
+
+if radioType == "B210":
+    node = request.RawPC(radioNode)
+    node.component_id         = radioNode
+    node.component_manager_id = radioURN
     node.disk_image           = IMAGE
-    
-    COMMAND += " -t B210"
 else:
     # Node
-    node = request.RawPC(params.NodeID + '-host')
-    if params.ComputeType == "Any":
-        node.hardware_type = "powder-compute"
-    else:
-        node.hardware_type = params.ComputeType
-        pass
+    node = request.RawPC(radioNode + '-host')
+    node.hardware_type = "powder-compute"
     node.disk_image           = IMAGE
-    node.component_manager_id = MS
+    node.component_manager_id = radioURN
 
     radio = request.RawPC('x310')
-    radio.component_id         = params.NodeID
-    radio.component_manager_id = params.Where
+    radio.component_id         = radioNode
+    radio.component_manager_id = radioURN
     
     # Link between X310 and host -- second interface
     xiface1 = radio.addInterface("xif1")
@@ -155,14 +259,15 @@ else:
     link.bandwidth = 10 * 1000 * 1000 # 10Gbps
     link.setNoBandwidthShaping();
     link.setJumboFrames()
-    
-    COMMAND += " -t X310 -r " + params.NodeID
     pass
 
 #
 # Start up X11 VNC for display.
 #
 node.startVNC()
+
+COMMAND += " -t " + radioType + " -r " + radioNode
+COMMAND += " -N '" + params.Radio + "'"
 
 if params.NoRun:
     COMMAND += " -n"
@@ -175,6 +280,8 @@ if params.runCount >= 0:
     pass
 if params.Gain != "":
     COMMAND += " -g " + str(params.Gain)
+else:
+    COMMAND += " -g " + str(radioGain)
     pass
 if params.Interval != "":
     COMMAND += " -D " + str(params.Interval)

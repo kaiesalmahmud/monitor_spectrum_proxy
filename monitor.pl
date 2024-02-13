@@ -22,7 +22,7 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:";
+my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:N:";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
@@ -31,6 +31,7 @@ my $websave     = 0;
 my $dosubdir    = 0;
 my $type;
 my $radioID;
+my $radioDesc   = "";
 my $gain;
 my $CONFIG      = "/etc/rfmonitor/device_config.json";
 my $LOGFILE     = "/tmp/monitor.$$";
@@ -149,6 +150,9 @@ if (defined($options{"Z"})) {
 }
 if (defined($options{"R"})) {
     $RANGE = $options{"R"};
+}
+if (defined($options{"N"})) {
+    $radioDesc = $options{"N"};
 }
 
 #
@@ -610,6 +614,7 @@ sub UploadObservation($)
 	"monitor_id"  => $DSTMONID,
 	"types"       => "ota,sweep",
 	"format"      => "psd-csv-ota",
+	"description" => $radioDesc,
 	"min_freq"    => $min_freq * 1000000,
 	"max_freq"    => $max_freq * 1000000,
 	"starts_at"   => $stamp,
