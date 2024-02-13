@@ -44,102 +44,122 @@ allRadios = {
     "Bookstore Nuc1" : {
         "urn"  : 'urn:publicid:IDN+bookstore.powderwireless.net+authority+cm',
         "type" : "B210",
-        "node" : "nuc1"
+        "node" : "nuc1",
+        "monid": "",
     },
     "Bookstore Nuc2" : {
         "urn"  : 'urn:publicid:IDN+bookstore.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "minid": "",
     },
     "CPG Nuc1" : {    
         "urn"  : 'urn:publicid:IDN+cpg.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "CPG Nuc2" : {    
         "urn"  : 'urn:publicid:IDN+cpg.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "299cac8d-f8af-4ca9-b77e-9a548e422309",
     },
     "EBC Nuc1" : {
         "urn"  : 'urn:publicid:IDN+ebc.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "EBC Nuc2" : {
         "urn"  : 'urn:publicid:IDN+ebc.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "5c4358aa-5906-4a32-aeca-f51bfe353c37",
     },
     "Guesthouse Nuc1" : {
         "urn"  : 'urn:publicid:IDN+guesthouse.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "Guesthouse Nuc2" : {
         "urn"  : 'urn:publicid:IDN+guesthouse.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
     "Humanities Nuc1" : {
         "urn"  : 'urn:publicid:IDN+humanities.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "Humanities Nuc2" : {
         "urn"  : 'urn:publicid:IDN+humanities.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
     "Law Nuc1" : {
         "urn"  : 'urn:publicid:IDN+law73.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "Law Nuc2" : {
         "urn"  : 'urn:publicid:IDN+law73.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
     "Madsen Nuc1" : {
         "urn"  : 'urn:publicid:IDN+madsen.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "Madsen Nuc2" : {
         "urn"  : 'urn:publicid:IDN+madsen.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
     "Moran Nuc1" : {
         "urn"  : 'urn:publicid:IDN+moran.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "Moran Nuc2" : {
         "urn"  : 'urn:publicid:IDN+moran.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
     "Sagepoint Nuc1" : {
         "urn"  : 'urn:publicid:IDN+sagepoint.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "Sagepoint Nuc2" : {
         "urn"  : 'urn:publicid:IDN+sagepoint.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
     "WEB Nuc1" : {
         "urn"  : 'urn:publicid:IDN+web.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc1",
+        "monid": "",
     },
     "WEB Nuc2" : {
         "urn"  : 'urn:publicid:IDN+web.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
+        "monid": "",
     },
 }
 # The Select list provides index into above dict.
@@ -185,19 +205,20 @@ pc.defineParameter("Range", "Frequency Range",
                    "blank, defaults to 100e6-6e9")
 
 # DST Endpoint
-pc.defineParameter("DST", "DST URL",
+pc.defineParameter("DST", "ZMC URL",
                    portal.ParameterType.STRING, "",
-                   longDescription="DST URL to send observations to")
+                   longDescription="ZMC URL to send observations to")
 
 # Auth Token
 pc.defineParameter("DSTAuth", "Authorization Token",
                    portal.ParameterType.STRING, "",
-                   longDescription="Authorization token for DST")
+                   longDescription="Authorization token for ZMC")
 
 # Monitor ID,
 pc.defineParameter("DSTMonID", "ZMC Monitor ID",
                    portal.ParameterType.STRING, "",
-                   longDescription="ZMC Monitor ID")
+                   longDescription="ZMC Monitor ID. Leave this blank and " +
+                   "we will figure it out")
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
@@ -228,6 +249,7 @@ radioInfo = allRadios[params.Radio]
 radioType = radioInfo["type"]
 radioURN  = radioInfo["urn"]
 radioNode = radioInfo["node"]
+radioMonID= radioInfo["monid"]
 radioGain = defaultGains[radioType];
 
 if radioType == "B210":
@@ -289,7 +311,11 @@ if params.Interval != "":
 if params.DST != "":
     COMMAND += " -Z '" + str(params.DST) + "'"
     COMMAND += " -A '" + str(params.DSTAuth) + "'"
-    COMMAND += " -I '" + str(params.DSTMonID) + "'"
+    if params.DSTMonID != "":
+        COMMAND += " -I '" + str(params.DSTMonID) + "'"
+    else:
+        COMMAND += " -I '" + radioMonID + "'"
+        pass
     pass
 if params.Range != "":
     COMMAND += " -R '" + str(params.Range) + "'"
