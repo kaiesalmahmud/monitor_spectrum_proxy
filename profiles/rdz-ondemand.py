@@ -75,12 +75,6 @@ pc.defineParameter("DSTAuth", "Authorization Token",
                    portal.ParameterType.STRING, "",
                    longDescription="Authorization token for ZMC")
 
-# Monitor ID,
-pc.defineParameter("DSTMonID", "ZMC Monitor ID",
-                   portal.ParameterType.STRING, "",
-                   longDescription="ZMC Monitor ID. Leave this blank and " +
-                   "we will figure it out")
-
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
@@ -120,11 +114,6 @@ if params.Interval != "":
 if params.DST != "":
     COMMAND += " -Z '" + str(params.DST) + "'"
     COMMAND += " -A '" + str(params.DSTAuth) + "'"
-    if params.DSTMonID != "":
-        COMMAND += " -I '" + str(params.DSTMonID) + "'"
-    else:
-        COMMAND += " -I '" + radioMonID + "'"
-        pass
     pass
 if params.Range != "":
     COMMAND += " -R '" + str(params.Range) + "'"
@@ -181,6 +170,7 @@ for radioname in params.Radios:
         count = count + 1
         pass
 
+    command += " -I '" + radioMonID + "'"
     command += " -t " + radioType + " -r " + radioNode
     command += " -N '" + radioname + "'"
     command += " -g " + str(radioGain)
