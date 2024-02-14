@@ -173,7 +173,7 @@ for radioname in params.Radios:
         link.bandwidth = 10 * 1000 * 1000 # 10Gbps
         link.setNoBandwidthShaping();
         link.setJumboFrames()
-        count++
+        count = count + 1
         pass
 
     command += " -t " + radioType + " -r " + radioNode
