@@ -176,11 +176,7 @@ for radioname in params.Radios:
 
     command += " -t " + radioType + " -r " + radioNode
     command += " -N '" + radioname + "'"
-    if params.Gain != "":
-        command += " -g " + str(params.Gain)
-    else:
-        command += " -g " + str(radioGain)
-        pass
+    command += " -g " + str(radioGain)
     node.addService(pg.Execute(shell="sh", command=command))
     pass
 
