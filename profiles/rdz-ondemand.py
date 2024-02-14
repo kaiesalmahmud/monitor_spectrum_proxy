@@ -133,6 +133,7 @@ if params.Range != "":
 if len(params.Radios) == 0:
     params.Radios = radios.allRadios.keys()
     pass
+count = 0
 
 for radioname in params.Radios:
     radioInfo = radios.allRadios[radioname]
@@ -166,12 +167,13 @@ for radioname in params.Radios:
         hiface1 = node.addInterface("hif1")
         hiface1.addAddress(pg.IPv4Address("192.168.40.1", "255.255.255.0"))
 
-        link = request.Link("link1")
+        link = request.Link("link-" + str(count))
         link.addInterface(xiface1)
         link.addInterface(hiface1)
         link.bandwidth = 10 * 1000 * 1000 # 10Gbps
         link.setNoBandwidthShaping();
         link.setJumboFrames()
+        count++
         pass
 
     command += " -t " + radioType + " -r " + radioNode
