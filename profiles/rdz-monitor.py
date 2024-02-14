@@ -8,7 +8,7 @@ import geni.rspec.pg as pg
 import geni.rspec.igext as ig
 # Import the emulab extensions library.
 import geni.rspec.emulab
-import profiles.allRadios
+import profiles.allRadios as radios
 
 #
 # Setup the Tour info. We will add instructions below.
@@ -42,7 +42,7 @@ defaultGains = {
 }
 # The Select list provides index into above dict.
 radioSelect = []
-for key in allRadios.allRadios:
+for key in radios.allRadios:
     radioSelect.append((key, key))
     pass
 
