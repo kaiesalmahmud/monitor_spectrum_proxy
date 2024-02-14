@@ -123,7 +123,7 @@ if params.runCount < 0:
 
 pc.verifyParameters()
 
-radioInfo = allRadios[params.Radio]
+radioInfo = radios.allRadios[params.Radio]
 radioType = radioInfo["type"]
 radioURN  = radioInfo["urn"]
 radioNode = radioInfo["node"]
