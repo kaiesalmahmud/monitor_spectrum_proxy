@@ -131,7 +131,7 @@ if params.Range != "":
     pass
 
 if len(params.Radios) == 0:
-    params.Radios = allRadios.keys()
+    params.Radios = radios.allRadios.keys()
     pass
 
 for radioname in params.Radios:
