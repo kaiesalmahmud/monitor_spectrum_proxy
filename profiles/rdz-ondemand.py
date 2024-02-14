@@ -45,7 +45,7 @@ request = pc.makeRequestRSpec()
 
 # Request a set of radios. We will default to all.
 pc.defineParameter("Radios", "Radio",
-                   portal.ParameterType.STRING, "", radioSelect,
+                   portal.ParameterType.STRING, [], radioSelect,
                    min=0, multiValue=1, itemDefaultValue='')
 
 # Range to monitor
