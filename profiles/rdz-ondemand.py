@@ -135,7 +135,7 @@ if len(params.Radios) == 0:
     pass
 
 for radioname in params.Radios:
-    radioInfo = radios.allRadios[params.Radio]
+    radioInfo = radios.allRadios[radioname]
     radioType = radioInfo["type"]
     radioURN  = radioInfo["urn"]
     radioNode = radioInfo["node"]
@@ -175,7 +175,7 @@ for radioname in params.Radios:
         pass
 
     command += " -t " + radioType + " -r " + radioNode
-    command += " -N '" + params.Radio + "'"
+    command += " -N '" + radioname + "'"
     if params.Gain != "":
         command += " -g " + str(params.Gain)
     else:
