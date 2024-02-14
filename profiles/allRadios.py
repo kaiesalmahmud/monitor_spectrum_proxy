@@ -10,7 +10,7 @@ allRadios = {
         "urn"  : 'urn:publicid:IDN+bookstore.powderwireless.net+authority+cm',
         "type" : "B210",
         "node" : "nuc2",
-        "minid": "0df55eb2-d61c-4e5b-ad8f-406d4ae5a26a",
+        "monid": "0df55eb2-d61c-4e5b-ad8f-406d4ae5a26a",
     },
     "CPG Nuc1" : {    
         "urn"  : 'urn:publicid:IDN+cpg.powderwireless.net+authority+cm',
