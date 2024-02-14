@@ -8,7 +8,7 @@ import geni.rspec.pg as pg
 import geni.rspec.igext as ig
 # Import the emulab extensions library.
 import geni.rspec.emulab
-import allRadios
+import profiles.allRadios
 
 #
 # Setup the Tour info. We will add instructions below.
