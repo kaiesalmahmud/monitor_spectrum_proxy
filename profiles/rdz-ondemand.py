@@ -145,7 +145,8 @@ for radioname in params.Radios:
     command   = COMMAND
 
     if radioType == "B210":
-        node = request.RawPC(radioNode)
+        id = (radioname.split(" "))[0]
+        node = request.RawPC(id + "-" + radioNode)
         node.component_id         = radioNode
         node.component_manager_id = radioURN
         node.disk_image           = IMAGE
@@ -156,7 +157,7 @@ for radioname in params.Radios:
         node.disk_image           = IMAGE
         node.component_manager_id = radioURN
 
-        radio = request.RawPC('x310')
+        radio = request.RawPC(radioNode)
         radio.component_id         = radioNode
         radio.component_manager_id = radioURN
     
