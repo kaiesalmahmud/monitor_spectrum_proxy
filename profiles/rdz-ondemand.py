@@ -80,6 +80,8 @@ pc.defineParameter("TestRepo", "Test Repo",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="For testing only, use powder-testing " +
                    "local repo");
+# Retrieve the values the user specifies during instantiation.
+params = pc.bindParameters()
 
 # Check parameter validity.
 if params.runCount < 0:
