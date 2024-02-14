@@ -48,6 +48,17 @@ pc.defineParameter("Radios", "Radio",
                    portal.ParameterType.STRING, [], radioSelect,
                    min=0, multiValue=1, itemDefaultValue=radioSelect[0][0])
 
+# Number of loops to run.
+pc.defineParameter("runCount", "Run Count",
+                   portal.ParameterType.INTEGER, RUNCOUNT,
+                   longDescription="Number of times to run the monitor. " +
+                   "Set to zero to run forever")
+# Loop interval
+pc.defineParameter("Interval", "Loop Interval",
+                   portal.ParameterType.INTEGER, INTERVAL,
+                   longDescription="Loop interval, defaults to 10 seconds " +
+                   "if you leave this blank.")
+
 # Range to monitor
 pc.defineParameter("Range", "Frequency Range",
                    portal.ParameterType.STRING, RANGE,
