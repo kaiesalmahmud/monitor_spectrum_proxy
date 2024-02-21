@@ -443,14 +443,22 @@ sub ProbeB210()
     #
     # Create the config file.
     #
+    my $antenna = "RX2";
+    if ($nodeID =~ /cnode\-/i) {
+	$antenna = "TX/RX";
+    }
     system("sudo /bin/rm -f /tmp/device.cnf")
 	if (-e "/tmp/device.cnf");
     
     open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
-    print CONFIG "{ \"devices\" : { \"${nodeID}:rf0\" : ".
+    print CONFIG "{ ";
+    if ($nodeID =~ /cnode\-/i) {
+	print CONFIG "\"txrx_receive_hack\" : true, ";
+    }
+    print CONFIG "\"devices\" : { \"${nodeID}:rf0\" : ".
 	"{\"name\" : \"${nodeID}:rf0\", ".
-	"\"channels\" : {\"0\" : \"RX2\"} } } }\n";
+	"\"channels\" : {\"0\" : \"${antenna}\"} } } }\n";
     close(CONFIG);
     system("sudo /bin/cp -f /tmp/device.cnf $CONFIG");
     if ($?) {
@@ -619,12 +627,12 @@ sub UploadObservation($)
 	"max_freq"    => $max_freq * 1000000,
 	"starts_at"   => $stamp,
     };
-    print Dumper($request);
+    #print Dumper($request);
     $data = encode_base64($data);
     $request->{'data'} = $data;
 
-    my $command = "$CURL -k -X POST -H 'X-Api-Token: $DSTAUTH' " .
-	"-d \@- $DST/observations";
+    my $command = "$CURL -s -S -k -X POST -H 'X-Api-Token: $DSTAUTH' " .
+	"-d \@- $DST/observations | head -c 1024";
     print "$command\n";
 
     #
@@ -643,6 +651,7 @@ sub UploadObservation($)
     my $jsonstr = eval { JSON::encode_json($request); };
     if ($@) {
 	print STDERR $@;
+	return;
     }
     $jsonstr =~ s/\\n//mg;
     print PIPE $jsonstr;
