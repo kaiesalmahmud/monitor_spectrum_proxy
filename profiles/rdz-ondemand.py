@@ -21,7 +21,7 @@ tour.Description(ig.Tour.TEXT, "Allocate all radios and run the monitor");
 #
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU18-64-STD"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
-COMMAND   = "/local/repository/monitor.pl"
+COMMAND   = "/local/repository/monitor.pl -K "
 RANGE     = "3350e6-3750e6"
 RUNCOUNT  = 1
 INTERVAL  = 10

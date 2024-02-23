@@ -22,13 +22,14 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:N:";
+my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:N:K";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
 my $websave     = 0;
 my $dosubdir    = 0;
+my $nofail      = 0;
 my $type;
 my $radioID;
 my $radioDesc   = "";
@@ -108,6 +109,9 @@ if (defined($options{"n"})) {
 }
 if (defined($options{"V"})) {
     $viewer = 1;
+}
+if (defined($options{"K"})) {
+    $nofail = 1;
 }
 if (defined($options{"W"})) {
     $websave = 1;
@@ -307,6 +311,11 @@ while ($LOOPS) {
 		$slacked = time();
 	    }
 	    goto skip;
+	}
+	if ($nofail) {
+	    print "Ignoring failure, going around again\n";
+	    sleep(2);
+	    next;
 	}
 	fatal("Error running the monitor");
     }
@@ -666,7 +675,7 @@ sub fatal($)
     my ($mesg) = $_[0];
     $exiting = 1;
     Notify($mesg);
-    system("/bin/cp $LOGFILE /proj/$pid");
+    system("/bin/cp -f $LOGFILE /proj/$pid");
 
     die("*** $0:\n".
 	"    $mesg\n");
