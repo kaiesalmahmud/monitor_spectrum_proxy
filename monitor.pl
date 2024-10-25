@@ -8,6 +8,7 @@ use Getopt::Std;
 use File::Temp qw(tempfile);
 use File::Basename;
 use POSIX qw(isatty setsid strftime);
+use MIME::Base64;
 
 # Drag in path stuff so we can find emulab stuff.
 BEGIN { require "/etc/emulab/paths.pm"; import emulabpaths; }
@@ -21,15 +22,17 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:S";
+my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:N:K";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
 my $websave     = 0;
 my $dosubdir    = 0;
+my $nofail      = 0;
 my $type;
 my $radioID;
+my $radioDesc   = "";
 my $gain;
 my $CONFIG      = "/etc/rfmonitor/device_config.json";
 my $LOGFILE     = "/tmp/monitor.$$";
@@ -47,7 +50,9 @@ my $CACHE       = "https://www.emulab.net/downloads/ettus/binaries/cache";
 my $LOADER      = "/usr/bin/uhd_image_loader";
 my $GENIGET     = "/usr/bin/geni-get";
 my $GZIP        = "/bin/gzip";
+my $CURL        = "/usr/bin/curl";
 my $REBOOT      = "/usr/local/bin/node_reboot";
+my $NOTIFYSLACK = "/usr/local/bin/notifyslack"; 
 my $IFACE       = "rf0";  # Someday we will be able to monitor others TXs
 my $WBSTORE     = "$VARDIR/save";
 my $SAVEDIR     = $WBSTORE;
@@ -55,6 +60,11 @@ my $WEBDIR      = "/local/www";
 my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
+my $slacked     = 0;
+my $DST;
+my $DSTAUTH;
+my $DSTMONID;
+my $RANGE;
 
 #
 # HOME will not be defined until new images are built.
@@ -76,6 +86,7 @@ sub ProbeX310();
 sub DownLoadImages($);
 sub fatal($);
 sub Notify($);
+sub UploadObservation($);
 
 # For SENDMAIL
 use libtestbed;
@@ -99,6 +110,9 @@ if (defined($options{"n"})) {
 if (defined($options{"V"})) {
     $viewer = 1;
 }
+if (defined($options{"K"})) {
+    $nofail = 1;
+}
 if (defined($options{"W"})) {
     $websave = 1;
     if (defined($options{"S"})) {
@@ -110,12 +124,39 @@ if (defined($options{"t"})) {
 }
 if (defined($options{"c"})) {
     $LOOPS = $options{"c"};
+    if ($LOOPS == 0) {
+	# Loop forever
+	$LOOPS = 99999999;
+    }
 }
 if (defined($options{"D"})) {
     $LOOPDELAY = $options{"D"};
 }
 if (defined($options{"r"})) {
     $radioID = $options{"r"};
+}
+if (defined($options{"T"})) {
+    $ENV{"POWDERREPO"} = "powder-testing";
+}
+if (defined($options{"g"})) {
+    $gain = $options{"g"};
+}
+if (defined($options{"Z"})) {
+    $DST = $options{"Z"};
+    if (!exists($options{"A"})) {
+	fatal("Need -A argument with -Z");
+    }
+    if (!exists($options{"I"})) {
+	fatal("Need -I argument with -Z");
+    }
+    $DSTAUTH  = $options{"A"};
+    $DSTMONID = $options{"I"};
+}
+if (defined($options{"R"})) {
+    $RANGE = $options{"R"};
+}
+if (defined($options{"N"})) {
+    $radioDesc = $options{"N"};
 }
 
 #
@@ -233,12 +274,13 @@ if ($viewer) {
 while ($LOOPS) {
     my $headered = 0;
     my $ID = ($type eq "B210" ? $nodeID : $radioID);
+    my $opt = (defined($RANGE) ? "-R '$RANGE'" : "");
     
     my ($fp, $filename) = tempfile(UNLINK => 0);
     if (!$fp) {
 	fatal("Could not open a temporary file");
     }
-    if (! open(MON, "$MONITOR -o -n -g $gain |")) {
+    if (! open(MON, "$MONITOR -o -n -g $gain $opt |")) {
 	fatal("Could not start ssh-keygen");
     }
     while (<MON>) {
@@ -263,8 +305,30 @@ while ($LOOPS) {
     }
     close($fp);
     if (!close(MON)) {
+	if ($websave) {
+	    if ($slacked == 0 || time() - $slacked > (12 * 3600)) {
+#		system("$NOTIFYSLACK 'Monitor failed'");
+		$slacked = time();
+	    }
+	    goto skip;
+	}
+	if ($nofail) {
+	    print "Ignoring failure, going around again\n";
+	    sleep(2);
+	    next;
+	}
 	fatal("Error running the monitor");
     }
+    #
+    # RDZ case
+    #
+    if (defined($DST)) {
+	UploadObservation($filename);
+	unlink($filename);
+	goto skip;
+    }
+    
+    $slacked = 0;
     my $now  = time();
     my $name = "${ID}:rf0-${now}.csv.gz";
 
@@ -325,6 +389,7 @@ while ($LOOPS) {
 	    fatal("Could not move dopey tar file into place");
 	}
     }
+  skip:
     $LOOPS--;
     sleep($LOOPDELAY)    
 	if ($LOOPS);
@@ -387,21 +452,29 @@ sub ProbeB210()
     #
     # Create the config file.
     #
+    my $antenna = "RX2";
+    if ($nodeID =~ /cnode\-/i) {
+	$antenna = "TX/RX";
+    }
     system("sudo /bin/rm -f /tmp/device.cnf")
 	if (-e "/tmp/device.cnf");
     
     open(CONFIG, "> /tmp/device.cnf") or
 	fatal("Could not open config file for writing: $!");
-    print CONFIG "{ \"devices\" : { \"${nodeID}:rf0\" : ".
+    print CONFIG "{ ";
+    if ($nodeID =~ /cnode\-/i) {
+	print CONFIG "\"txrx_receive_hack\" : true, ";
+    }
+    print CONFIG "\"devices\" : { \"${nodeID}:rf0\" : ".
 	"{\"name\" : \"${nodeID}:rf0\", ".
-	"\"channels\" : {\"0\" : \"RX2\"} } } }\n";
+	"\"channels\" : {\"0\" : \"${antenna}\"} } } }\n";
     close(CONFIG);
     system("sudo /bin/cp -f /tmp/device.cnf $CONFIG");
     if ($?) {
 	fatal("Could not copy new file to $CONFIG");
     }
     # Default gain for B210s
-    $gain = 85;
+    $gain = 85 if (!defined($gain));
     return 0;
 }
 
@@ -486,7 +559,7 @@ sub ProbeX310()
 	fatal("Could not copy new file to $CONFIG");
     }
     # Default gain for X310s
-    $gain = 10;
+    $gain = 10 if (!defined($gain));
 }
 
 sub Notify($)
@@ -524,6 +597,77 @@ sub DownLoadImages($)
     return 0;
 }
 
+#
+# RDZ
+#
+sub UploadObservation($)
+{
+    my ($filename) = @_;
+    my $stamp   = POSIX::strftime("20%y-%m-%dT%H:%M:%SZ", gmtime(time()));
+    my $min_freq;
+    my $max_freq;
+    my $data;
+    require JSON; 
+    
+    if (open(DATA, $filename)) {
+	# Header
+	$data = <DATA>;
+	# First line to get min freq.
+	my $line = <DATA>;
+	$data .= $line;
+	($min_freq) = split(",", $line);
+	while (<DATA>) {
+	    $line = $_;
+	    $data .= $line;
+	}
+	# Last line to get max freq.
+	($max_freq) = split(",", $line);
+	close(DATA);
+    }
+    else {
+	fatal("Could not open $filename: $!");
+    } 
+    my $request = {
+	"monitor_id"  => $DSTMONID,
+	"types"       => "ota,sweep",
+	"format"      => "psd-csv-ota",
+	"description" => $radioDesc,
+	"min_freq"    => $min_freq * 1000000,
+	"max_freq"    => $max_freq * 1000000,
+	"starts_at"   => $stamp,
+    };
+    #print Dumper($request);
+    $data = encode_base64($data);
+    $request->{'data'} = $data;
+
+    my $command = "$CURL -s -S -k -X POST -H 'X-Api-Token: $DSTAUTH' " .
+	"-d \@- $DST/observations | head -c 1024";
+    print "$command\n";
+
+    #
+    # Pipe the json encoded request into curl.
+    #
+    my $pid = open(PIPE, "|-");
+    if (!defined($pid)) {
+	print STDERR "UploadObservation; popen failed!\n";
+	return;
+    }
+    if (!$pid) {
+	open(STDERR, ">&STDOUT");
+	exec($command);
+	die("UploadObservation: exec failed\n");
+    }
+    my $jsonstr = eval { JSON::encode_json($request); };
+    if ($@) {
+	print STDERR $@;
+	return;
+    }
+    $jsonstr =~ s/\\n//mg;
+    print PIPE $jsonstr;
+    close(PIPE);
+    waitpid($pid, 0);
+}
+
 my $exiting = 0;
 
 sub fatal($)
@@ -531,7 +675,7 @@ sub fatal($)
     my ($mesg) = $_[0];
     $exiting = 1;
     Notify($mesg);
-    system("/bin/cp $LOGFILE /proj/$pid");
+    system("/bin/cp -f $LOGFILE /proj/$pid");
 
     die("*** $0:\n".
 	"    $mesg\n");

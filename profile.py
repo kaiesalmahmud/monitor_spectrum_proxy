@@ -84,6 +84,12 @@ pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="Install but do not run the monitor")
 
+# For testing,
+pc.defineParameter("TestRepo", "Test Repo",
+                   portal.ParameterType.BOOLEAN, False,
+                   longDescription="For testing only, use powder-testing "
+                   "local repo");
+
 params = pc.bindParameters()
 
 # Check parameter validity.
@@ -149,6 +155,9 @@ node.startVNC()
 if params.NoRun:
     COMMAND += " -n"
     pass
+if params.TestRepo:
+    COMMAND += " -T"
+    pass
 if params.WebSave:
     COMMAND += " -W"
     if params.SubDirs:
@@ -162,7 +171,7 @@ if params.runCount > 1:
 if params.Interval != "":
     COMMAND += " -D " + str(params.Interval);
     pass
-    
+
 node.addService(pg.Execute(shell="sh", command=COMMAND))
 
 #

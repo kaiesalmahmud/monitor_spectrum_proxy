@@ -10,7 +10,8 @@ fi
 
 RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
 
-REPO="powder"
+POWDERREPO=${POWDERREPO:-"powder"}
+REPO=$POWDERREPO
 
 # WTF! The tabs before priority actually matter.
 echo "http://boss/mirror/repos.emulab.net/$REPO/ubuntu	priority:1" | sudo tee -a /etc/apt/emulab-$REPO-mirrorlist.txt &&
@@ -38,7 +39,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo apt-get -y install --no-install-recommends uhd-host libuhd-dev python3-uhd
+sudo apt-get -y install --no-install-recommends uhd-host libuhd-dev python3-uhd libjson-perl
 if [ $? -ne 0 ]; then
     echo 'apt-get install UHD failed'
     exit 1
