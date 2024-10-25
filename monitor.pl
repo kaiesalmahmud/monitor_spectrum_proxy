@@ -61,6 +61,8 @@ my $LOOPS       = 1;
 my $LOOPDELAY   = 60;
 my $HOME        = $ENV{"HOME"};
 my $slacked     = 0;
+my $failures    = 0;
+my $rebooted    = 0;
 my $DST;
 my $DSTAUTH;
 my $DSTMONID;
@@ -83,6 +85,7 @@ $| = 1;
 # Protos
 sub ProbeB210();
 sub ProbeX310();
+sub RebootRadio();
 sub DownLoadImages($);
 sub fatal($);
 sub Notify($);
@@ -313,12 +316,27 @@ while ($LOOPS) {
 	    goto skip;
 	}
 	if ($nofail) {
-	    print "Ignoring failure, going around again\n";
-	    sleep(2);
-	    next;
+	    if ($rebooted) {
+		fatal("Still failing after a reboot, quitting");
+	    }
+	    elsif ($failures < 2) {
+		print "Ignoring failure, going around again\n";
+		sleep(2);
+		$failures++;
+		next;
+	    }
+	    else {
+		print "Too many consecutive failures, rebooting radio\n";
+		$rebooted++;
+		RebootRadio();
+		next;
+	    }
 	}
 	fatal("Error running the monitor");
     }
+    $failures = 0;
+    $rebooted = 0;
+    
     #
     # RDZ case
     #
@@ -560,6 +578,21 @@ sub ProbeX310()
     }
     # Default gain for X310s
     $gain = 10 if (!defined($gain));
+}
+
+sub RebootRadio()
+{
+    if ($type eq "B210") {
+	print "Rebooting ...\n";
+	system("/bin/sync");
+	system("$REBOOT -s $nodeID");
+    }
+    elsif ($type eq "X310") {
+	print "Rebooting $radioID ...\n";
+	system("$REBOOT -s $radioID");
+	print "Waiting a few seconds ...\n";
+	sleep(10);
+    }
 }
 
 sub Notify($)
