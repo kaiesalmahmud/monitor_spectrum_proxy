@@ -277,16 +277,33 @@ if ($viewer) {
 while ($LOOPS) {
     my $headered = 0;
     my $ID = ($type eq "B210" ? $nodeID : $radioID);
-    my $opt = (defined($RANGE) ? "-R '$RANGE'" : "");
+    my $opt = (defined($RANGE) ? "-R $RANGE" : "");
+    my $cmd = "-o -n -g $gain $opt";
+    print "$MONITOR $cmd\n";
     
     my ($fp, $filename) = tempfile(UNLINK => 0);
     if (!$fp) {
 	fatal("Could not open a temporary file");
     }
-    if (! open(MON, "$MONITOR -o -n -g $gain $opt |")) {
-	fatal("Could not start ssh-keygen");
+    my $childpid = open(my $MON, "-|");
+    if (!defined($childpid)) {
+	print STDERR "Could not start $MONITOR: $!\n";
+	print STDERR "Waiting a while ...\n";
+	sleep(60);
+	goto skip;
     }
-    while (<MON>) {
+    if (!$childpid) {
+	exec($MONITOR, split(/\s+/, $cmd));
+	die("Could not exec the monitor: $!\n");
+    }
+    local $SIG{ALRM} = sub {
+	print "Monitor process ($childpid) is wedged, Killing it!\n";
+	kill("TERM", $childpid);
+    };
+    # XXX. This is longer then it needs to be.
+    alarm(120);
+    
+    while (<$MON>) {
 	if ($_ !~ /^${ID}/) {
 	    print $_;
 	    next;
@@ -307,7 +324,8 @@ while ($LOOPS) {
 	print $fp "\n";
     }
     close($fp);
-    if (!close(MON)) {
+    alarm(0);
+    if (!close($MON)) {
 	if ($websave) {
 	    if ($slacked == 0 || time() - $slacked > (12 * 3600)) {
 #		system("$NOTIFYSLACK 'Monitor failed'");
