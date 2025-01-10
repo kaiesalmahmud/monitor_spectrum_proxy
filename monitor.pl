@@ -524,7 +524,9 @@ sub ProbeB210()
 sub ProbeX310()
 {
     # Need this for X/N 310s
-    system("sudo /sbin/sysctl -w net.core.wmem_max=24862979");
+    system("sudo /sbin/sysctl -w net.core.wmem_max=25000000");
+    system("sudo /sbin/sysctl -w net.core.rmem_max=25000000");
+    system("/local/repository/tune-cpu.sh");
 
     if (DownLoadImages("x3xx")) {
 	fatal("Could not download x3xx images");
