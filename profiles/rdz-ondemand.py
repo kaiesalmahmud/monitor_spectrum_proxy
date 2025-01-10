@@ -19,7 +19,7 @@ tour.Description(ig.Tour.TEXT, "Allocate all radios and run the monitor");
 #
 # Defaults for this setup
 #
-IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GRE310"
+IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GR310"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 COMMAND   = "/local/repository/monitor.pl -K "
 RANGE     = "3350e6-3750e6"
