@@ -4,6 +4,7 @@
 sudo cpupower idle-set -D 2
 
 # disable turbo
+sudo apt-get -y install --no-install-recommends msr-tools
 sudo modprobe msr
 
 cores=$(cat /proc/cpuinfo | grep processor | awk '{print $3}')
