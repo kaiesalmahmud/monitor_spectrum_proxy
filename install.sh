@@ -39,7 +39,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo apt-get -y install --no-install-recommends uhd-host libuhd-dev python3-uhd libjson-perl
+sudo apt-get -y install --no-install-recommends uhd-host libuhd-dev python3-uhd libjson-perl sendmail
 if [ $? -ne 0 ]; then
     echo 'apt-get install UHD failed'
     exit 1
