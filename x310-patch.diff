@@ -1,0 +1,26 @@
+diff --git a/src/monitor/radio/constants.py b/src/monitor/radio/constants.py
+index e07e512..e9a2ba3 100644
+--- a/src/monitor/radio/constants.py
++++ b/src/monitor/radio/constants.py
+@@ -16,7 +16,7 @@ START_FREQ = range.START_FREQ
+ END_FREQ = range.END_FREQ
+ 
+ # maximum instantaneous bandwidth is equal to the maximum sampling rate
+-MAX_INST_BW = 30.72e6
++MAX_INST_BW = 46.08e6
+ ANALOG_BW_CUTOFF_FACTOR = 0.9
+ ANALOG_BW = MAX_INST_BW * ANALOG_BW_CUTOFF_FACTOR # 28e6
+ 
+diff --git a/src/monitor/radio/device.py b/src/monitor/radio/device.py
+index a5b02a3..ce73ea2 100755
+--- a/src/monitor/radio/device.py
++++ b/src/monitor/radio/device.py
+@@ -190,7 +190,7 @@ class Device():
+         N = int(N)
+         # tune to the indicated center frequency
+         for chan in self.chans:
+-            self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(frequency), chan)
++            self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(frequency, self.rate / 2), chan)
+         
+         self.end_tune_time = time.time()
+ 

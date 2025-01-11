@@ -528,6 +528,14 @@ sub ProbeX310()
     system("sudo /sbin/sysctl -w net.core.rmem_max=25000000");
     system("/local/repository/tune-cpu.sh");
 
+    # Dustin patch that is not merged in yet.
+    # Only when running as a DST monitor, not sure we want anything to
+    # suddenly change for other uses of this profile.
+    if ($DST) {
+	system("sudo patch -p3 --dry-run -i /local/repository/x310-patch.diff ".
+	       "  -d /usr/lib/python3/dist-packages/monitor");
+    }
+
     if (DownLoadImages("x3xx")) {
 	fatal("Could not download x3xx images");
     }

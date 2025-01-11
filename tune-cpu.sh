@@ -1,8 +1,11 @@
 #!/bin/bash
 
-sudo modprobe msr
+# disable C-states
+sudo cpupower idle-set -D 2
 
 # disable turbo
+sudo modprobe msr
+
 cores=$(cat /proc/cpuinfo | grep processor | awk '{print $3}')
 for core in $cores; do
     sudo wrmsr -p${core} 0x1a0 0x4000850089
