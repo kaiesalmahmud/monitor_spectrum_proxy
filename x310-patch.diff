@@ -15,7 +15,7 @@ diff --git a/src/monitor/radio/device.py b/src/monitor/radio/device.py
 index a5b02a3..ce73ea2 100755
 --- a/src/monitor/radio/device.py
 +++ b/src/monitor/radio/device.py
-@@ -190,7 +190,7 @@ class Device():
+@@ -190,6 +190,6 @@ class Device():
          N = int(N)
          # tune to the indicated center frequency
          for chan in self.chans:
@@ -23,4 +23,3 @@ index a5b02a3..ce73ea2 100755
 +            self.usrp.set_rx_freq(uhd.libpyuhd.types.tune_request(frequency, self.rate / 2), chan)
          
          self.end_tune_time = time.time()
- 
