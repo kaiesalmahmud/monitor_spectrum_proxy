@@ -532,7 +532,7 @@ sub ProbeX310()
     # Only when running as a DST monitor, not sure we want anything to
     # suddenly change for other uses of this profile.
     if ($DST) {
-	system("sudo patch -p3 --dry-run -i /local/repository/x310-patch.diff ".
+	system("sudo patch -p3 -i /local/repository/x310-patch.diff ".
 	       "  -d /usr/lib/python3/dist-packages/monitor");
     }
 
