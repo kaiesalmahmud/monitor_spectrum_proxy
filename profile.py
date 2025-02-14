@@ -72,7 +72,7 @@ pc.defineParameter("SubDirs", "Per day subdirs",
 
 # Number of loops to run.
 pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
-                   longDescription="Number of times to run the monitor")
+                   longDescription="Number of times to run the monitor. Set to zero to run forever")
 # Loop interval
 pc.defineParameter("Interval", "Loop Interval",
                    portal.ParameterType.STRING, "",
@@ -101,9 +101,9 @@ if params.NodeID == "":
     pc.reportError(portal.ParameterError(
     "You must provide a node ID", ["NodeID"]))
     pass
-if params.runCount <= 0:
+if params.runCount < 0:
     pc.reportError(portal.ParameterError(
-    "Run count must be greater the zero.", ["runCount"]))
+    "Run count must be non-negative", ["runCount"]))
     pass
 
 pc.verifyParameters()
@@ -165,7 +165,7 @@ if params.WebSave:
         pass
     bs = node.Blockstore("bs", "/local/www")
     pass
-if params.runCount > 1:
+if params.runCount >= 0:
     COMMAND += " -c " + str(params.runCount);
     pass
 if params.Interval != "":
