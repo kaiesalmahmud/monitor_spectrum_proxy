@@ -28,7 +28,7 @@ INTERVAL  = 10
 
 # Default gains by RadioType.
 defaultGains = {
-    "B210" : 60,
+    "B210" : 52,
     "X310" : 15,
 }
 # The Select list provides index into above dict.
