@@ -35,7 +35,12 @@ defaultGains = {
 radioSelect = []
 for key in radios.allRadios:
     radioSelect.append((key, key))
-    pass
+def cmp_key_helper(x):
+    if x[0][0].islower():
+        return x[0].upper()
+    else:
+        return x[0].lower()
+radioSelect = sorted(radioSelect, key=cmp_key_helper)
 
 # Create a portal context.
 pc = portal.Context()
