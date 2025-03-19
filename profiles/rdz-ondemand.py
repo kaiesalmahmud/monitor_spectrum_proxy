@@ -72,14 +72,14 @@ pc.defineParameter("Range", "Frequency Range",
                    "blank, defaults to " + RANGE + ".")
 
 # DST Endpoint
-pc.defineParameter("DST", "DST URL",
+pc.defineParameter("DST", "OpenZMS DST URL",
                    portal.ParameterType.STRING, "",
-                   longDescription="DST URL to which to send observations.")
+                   longDescription="OpenZMS DST URL at which to create observations.")
 
 # Auth Token
-pc.defineParameter("DSTAuth", "Authorization Token",
+pc.defineParameter("DSTAuth", "OpenZMS Token",
                    portal.ParameterType.STRING, "",
-                   longDescription="Authorization token for DST.")
+                   longDescription="OpenZMS authorization token for DST observation creation.")
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
