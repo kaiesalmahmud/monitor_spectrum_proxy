@@ -51,13 +51,14 @@ request = pc.makeRequestRSpec()
 # Request a set of radios. We will default to all.
 pc.defineParameter("Radios", "Radio",
                    portal.ParameterType.STRING, [], radioSelect,
-                   min=0, multiValue=1, itemDefaultValue=radioSelect[0][0])
+                   min=0, multiValue=1, itemDefaultValue=radioSelect[0][0],
+                   longDescription="Select one or more radios on which to run the monitor.")
 
 # Number of loops to run.
 pc.defineParameter("runCount", "Run Count",
                    portal.ParameterType.INTEGER, RUNCOUNT,
                    longDescription="Number of times to run the monitor. " +
-                   "Set to zero to run forever")
+                   "Set to zero to run forever.")
 # Loop interval
 pc.defineParameter("Interval", "Loop Interval",
                    portal.ParameterType.INTEGER, INTERVAL,
@@ -68,26 +69,27 @@ pc.defineParameter("Interval", "Loop Interval",
 pc.defineParameter("Range", "Frequency Range",
                    portal.ParameterType.STRING, RANGE,
                    longDescription="Frequency range to scan. If you leave "+
-                   "blank, defaults to 100e6-6e9")
+                   "blank, defaults to " + RANGE + ".")
 
 # DST Endpoint
-pc.defineParameter("DST", "ZMC URL",
+pc.defineParameter("DST", "DST URL",
                    portal.ParameterType.STRING, "",
-                   longDescription="ZMC URL to send observations to")
+                   longDescription="DST URL to which to send observations.")
 
 # Auth Token
 pc.defineParameter("DSTAuth", "Authorization Token",
                    portal.ParameterType.STRING, "",
-                   longDescription="Authorization token for ZMC")
+                   longDescription="Authorization token for DST.")
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
-                   longDescription="Install but do not run the monitor")
+                   longDescription="Install but do not run the monitor.")
 
 # For testing,
 pc.defineParameter("TestRepo", "Test Repo",
                    portal.ParameterType.BOOLEAN, False,
+                   advanced=True,
                    longDescription="For testing only, use powder-testing " +
                    "local repo");
 # Retrieve the values the user specifies during instantiation.
