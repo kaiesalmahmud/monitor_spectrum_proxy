@@ -39,6 +39,7 @@ my $LOGFILE     = "/tmp/monitor.$$";
 my $REPO        = dirname($PROGRAM_NAME);
 my $INSTALL     = "$REPO/install.sh";
 my $INSTALLNGINX= "$REPO/install-nginx.sh";
+my $INSTALLZMSC = "$REPO/install-zmsclient.sh";
 my $MONITOR     = "/usr/bin/rfmonitor";
 my $MONITORETC  = "/etc/rfmonitor";
 my $TAR         = "/bin/tar";
@@ -225,6 +226,21 @@ if (!$noinstall) {
 	}
 	if (! -e "/local/nginx-done") {
 	    fatal("nginx did not install properly");
+	}
+    }
+    if ($DST) {
+	if (! -e "/local/zmsclient-done") {
+	    system($INSTALLZMSC);
+	    if ($?) {
+		fatal("Could not install zmsclient");
+	    }
+	}
+	if ($DST !~ /^https:\/\/rdz\.powderwireless\.net/) {
+	    #
+	    # Need to contact the inner ZMC to map the outer monitor to
+	    # the inner monitor ID.
+	    #
+	    MapOuterMonitor();
 	}
     }
 }
@@ -727,6 +743,26 @@ sub UploadObservation($)
     print PIPE $jsonstr;
     close(PIPE);
     waitpid($pid, 0);
+}
+
+#
+# Need to go ask the inner ZMC for the the monitor ID.
+#
+sub MapOuterMonitor()
+{
+    my $ZMC_HTTP = $DST;
+    $ZMC_HTTP =~ s/8020/8010/;    
+	
+    $ENV{"ZMC_HTTP"}  = $ZMC_HTTP;
+    $ENV{"ZMS_TOKEN"} = $DSTAUTH;
+    my $command = "zmsclient-cli monitor list --monitor $MONID | jq -r '.monitors[0].id'";
+    my $id = `$command`;
+    if ($? || $id =~ /^null$/i) {
+	fatal("Could not get the inner monitor ID");
+    }
+    chomp($id);
+    print "Inner monitor ID os $id\n";
+    $MONID = $id;
 }
 
 my $exiting = 0;
