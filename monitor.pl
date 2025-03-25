@@ -755,14 +755,14 @@ sub MapOuterMonitor()
 	
     $ENV{"ZMC_HTTP"}  = $ZMC_HTTP;
     $ENV{"ZMS_TOKEN"} = $DSTAUTH;
-    my $command = "zmsclient-cli monitor list --monitor $MONID | jq -r '.monitors[0].id'";
+    my $command = "zmsclient-cli monitor list --monitor $DSTMONID | jq -r '.monitors[0].id'";
     my $id = `$command`;
     if ($? || $id =~ /^null$/i) {
 	fatal("Could not get the inner monitor ID");
     }
     chomp($id);
     print "Inner monitor ID os $id\n";
-    $MONID = $id;
+    $DSTMONID = $id;
 }
 
 my $exiting = 0;
