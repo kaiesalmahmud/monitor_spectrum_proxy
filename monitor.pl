@@ -91,6 +91,7 @@ sub DownLoadImages($);
 sub fatal($);
 sub Notify($);
 sub UploadObservation($);
+sub MapOuterMonitor();
 
 # For SENDMAIL
 use libtestbed;
