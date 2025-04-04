@@ -756,11 +756,19 @@ sub MapOuterMonitor()
 	
     $ENV{"ZMC_HTTP"}  = $ZMC_HTTP;
     $ENV{"ZMS_TOKEN"} = $DSTAUTH;
-    my $command = "zmsclient-cli monitor list --monitor $DSTMONID | jq -r '.monitors[0].id'";
-    my $id = `$command`;
+
+    my $command = "zmsclient-cli monitor list --monitor $DSTMONID > /tmp/mm.$$ 2>&1";
+    system($command);
+    while ($?) {
+	print "Could not contact the DST. Trying again in a few seconds\n";
+	sleep(10);
+	system($command);
+    }
+    my $id = `cat /tmp/mm.$$ | jq -r '.monitors[0].id'`;
     if ($? || $id =~ /^null$/i) {
 	fatal("Could not get the inner monitor ID");
     }
+
     chomp($id);
     print "Inner monitor ID os $id\n";
     $DSTMONID = $id;
