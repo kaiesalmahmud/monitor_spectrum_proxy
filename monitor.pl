@@ -758,7 +758,7 @@ sub MapOuterMonitor()
     $ENV{"ZMS_TOKEN"} = $DSTAUTH;
     my $id;
 
-    for (my $i = 0; $i < 10; $i++) {
+    for (my $i = 0; $i < 15; $i++) {
 	my $command = "zmsclient-cli monitor list --monitor $DSTMONID > /tmp/mm.$$ 2>&1";
 	system($command);
 	while ($?) {
@@ -769,7 +769,7 @@ sub MapOuterMonitor()
 	my $res = `cat /tmp/mm.$$ | jq -r '.monitors[0].id'`;
 	if ($? || $res =~ /^null$/i) {
 	    print "Did not get the monitor from the DST, will try a few more times\n";
-	    sleep(20);
+	    sleep(30);
 	    next;
 	}
 	$id = $res;
