@@ -8,6 +8,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
+
 RELEASE="$(. /etc/os-release ; echo $UBUNTU_CODENAME)"
 
 POWDERREPO=${POWDERREPO:-"powder"}
