@@ -23,7 +23,8 @@ IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GR310"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 INSTALL   = "/local/repository/install.sh"
 INSTALLZMS= "/local/repository/install-zmsclient.sh"
-COMMAND   = "/local/repository/rdz-monitor.py  "
+COMMAND   = "sudo /local/repository/rdz-monitor.py --daemon  "
+PROBE     = "/local/repository/probe.pl  "
 RANGE     = "3350e6-3750e6"
 INTERVAL  = 10
 
@@ -125,7 +126,7 @@ COMMAND += " --dst-http " + params.DST
 COMMAND += " --zmc-http " + params.ZMC
 COMMAND += " --element-token " + params.Token
 if params.Range != "":
-    COMMAND += " ---range '" + str(params.Range) + "'"
+    COMMAND += " --range '" + str(params.Range) + "'"
     pass
 
 count = 0
@@ -137,6 +138,7 @@ for radioname in params.Radios:
     radioMonID= radioInfo["monid"]
     radioGain = defaultGains[radioType];
     command   = COMMAND
+    probe     = PROBE
 
     if radioType == "B210":
         id = radioNode
@@ -148,6 +150,7 @@ for radioname in params.Radios:
         node.component_id         = radioNode
         node.component_manager_id = radioURN
         node.disk_image           = IMAGE
+        probe += " B210"
     else:
         # Node
         node = request.RawPC(radioNode + '-host')
@@ -173,6 +176,7 @@ for radioname in params.Radios:
         link.setNoBandwidthShaping();
         link.setJumboFrames()
         count = count + 1
+        probe += " X310 " + radioNode
         pass
 
     command += " --monitor-id '" + radioMonID + "'"
@@ -182,6 +186,7 @@ for radioname in params.Radios:
     node.addService(pg.Execute(shell="sh", command=INSTALL))
     node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
     if not params.NoRun:
+        node.addService(pg.Execute(shell="sh", command=probe))
         node.addService(pg.Execute(shell="sh", command=command))
         pass
     pass

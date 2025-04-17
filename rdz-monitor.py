@@ -341,7 +341,7 @@ def init_main():
         help="Increase debug level: defaults to INFO; add once for zmsclient DEBUG; "+
         "add twice to set the root logger level to DEBUG")
     parser.add_argument(
-        "-b", "--daemon", default=False, action="store_true",
+        "--daemon", default=False, action="store_true",
         help="Daemonize")
     parser.add_argument(
         "--logfile", default=LOGFILE, type=str,

@@ -20,7 +20,7 @@ sub usage()
     print STDOUT "Usage: probe.pl [-dn] radiotype [radioid]\n";
     exit(-1);
 }
-my $optlist     = "d";
+my $optlist     = "dn";
 my $debug       = 0;
 my $noreboot    = 0;
 my $LOGFILE     = "/tmp/probe.$$";
