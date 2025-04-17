@@ -1,4 +1,4 @@
-"""Allocate a radio and run the monitor.
+"""Allocate a radio and run the RDZ monitor.
 """
 
 # Import the Portal object.
@@ -14,27 +14,19 @@ import profiles.allRadios as radios
 # Setup the Tour info. We will add instructions below.
 #  
 tour = ig.Tour()
-tour.Description(ig.Tour.TEXT, "Allocate a radio and run the monitor.");
+tour.Description(ig.Tour.TEXT, "Allocate all radios and run the monitor");
 
+#
+# Defaults for this setup
+#
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GR310"
-ENDPOINT  = "urn:publicid:IDN+cpg.powderwireless.net+authority+cm"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
-COMMAND   = "/local/repository/monitor.pl"
+INSTALL   = "/local/repository/install.sh"
+INSTALLZMS= "/local/repository/install-zmsclient.sh"
+COMMAND   = "/local/repository/rdz-monitor.py  "
+RANGE     = "3350e6-3750e6"
+INTERVAL  = 10
 
-#
-# Two types of situations; B210 directly connected, and X310 ethernet connected.
-#
-radioTypes = [
-    ('B210', 'B210'),
-    ('X310', 'X310'),
-]
-# For X310s only.
-computeTypes = [
-    ('Any', 'Any'),
-    ('d740', 'd740'),
-    ('d430', 'd430'),
-    ('d820', 'd820'),
-]
 # Default gains by RadioType.
 defaultGains = {
     "B210" : 52,
@@ -44,7 +36,12 @@ defaultGains = {
 radioSelect = []
 for key in radios.allRadios:
     radioSelect.append((key, key))
-    pass
+def cmp_key_helper(x):
+    if x[0][0].islower():
+        return x[0].upper()
+    else:
+        return x[0].lower()
+radioSelect = sorted(radioSelect, key=cmp_key_helper)
 
 # Create a portal context.
 pc = portal.Context()
@@ -52,154 +49,140 @@ pc = portal.Context()
 # Create a Request object to start building the RSpec. 
 request = pc.makeRequestRSpec()
 
-pc.defineParameter("Radio", "Radio",
-                   portal.ParameterType.STRING, radioSelect[0], radioSelect)
+# Request a set of radios. We will default to all.
+pc.defineParameter("Radios", "Radio",
+                   portal.ParameterType.STRING, [], radioSelect,
+                   min=0, multiValue=1, itemDefaultValue=radioSelect[0][0],
+                   longDescription="Select one or more radios on which to run the monitor.")
 
-pc.defineParameter("ComputeType", "Compute Type",
-                   portal.ParameterType.STRING, computeTypes[0], computeTypes,
-                   longDescription="Select a type for X310 compute host. " +
-                   "Defaults to the powder-compute soft type")
-
-# Number of loops to run.
-pc.defineParameter("runCount", "Run Count", portal.ParameterType.INTEGER, 1,
-                   longDescription="Number of times to run the monitor. " +
-                   "Set to zero to run forever")
 # Loop interval
 pc.defineParameter("Interval", "Loop Interval",
-                   portal.ParameterType.STRING, "",
-                   longDescription="Loop interval, defaults to 60 seconds " +
+                   portal.ParameterType.INTEGER, INTERVAL,
+                   longDescription="Loop interval, defaults to 10 seconds " +
                    "if you leave this blank.")
-
-# Radio gain.
-pc.defineParameter("Gain", "Radio Gain",
-                   portal.ParameterType.STRING, "",
-                   longDescription="Radio gain. If you leave blank, defaults "+
-                   "to 60 on B210s and 15 on X310s")
 
 # Range to monitor
 pc.defineParameter("Range", "Frequency Range",
-                   portal.ParameterType.STRING, "3500e6-3750e6",
+                   portal.ParameterType.STRING, RANGE,
                    longDescription="Frequency range to scan. If you leave "+
-                   "blank, defaults to 100e6-6e9")
+                   "blank, defaults to " + RANGE + ".")
 
 # DST Endpoint
-pc.defineParameter("DST", "ZMC URL",
-                   portal.ParameterType.STRING, "",
-                   longDescription="ZMC URL to send observations to")
+pc.defineParameter("ZMC", "OpenZMS ZMC URL",
+                   portal.ParameterType.STRING,
+                   "https://rdz.powderwireless.net:8010/v1",
+                   longDescription="OpenZMS ZMC URL")
+
+# DST Endpoint
+pc.defineParameter("DST", "OpenZMS DST URL",
+                   portal.ParameterType.STRING,
+                   "https://rdz.powderwireless.net:8020/v1",
+                   longDescription="OpenZMS DST URL")
 
 # Auth Token
-pc.defineParameter("DSTAuth", "Authorization Token",
+pc.defineParameter("Token", "OpenZMS Token",
                    portal.ParameterType.STRING, "",
-                   longDescription="Authorization token for ZMC")
-
-# Monitor ID,
-pc.defineParameter("DSTMonID", "ZMC Monitor ID",
-                   portal.ParameterType.STRING, "",
-                   longDescription="ZMC Monitor ID. Leave this blank and " +
-                   "we will figure it out")
+                   longDescription="OpenZMS authorization token")
 
 # Optional install only
 pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
-                   longDescription="Install but do not run the monitor")
+                   longDescription="Install but do not run the monitor.")
 
-# For testing,
-pc.defineParameter("TestRepo", "Test Repo",
-                   portal.ParameterType.BOOLEAN, False,
-                   longDescription="For testing only, use powder-testing " +
-                   "local repo");
-
+# Retrieve the values the user specifies during instantiation.
 params = pc.bindParameters()
 
 # Check parameter validity.
-if params.Radio == "":
+if params.Interval != "" and params.Interval < 0:
     pc.reportError(portal.ParameterError(
-        "You must provide a radio", ["Radio"]))
-    pass
-if params.runCount < 0:
-    pc.reportError(portal.ParameterError(
-    "Run count must be non-negative", ["runCount"]))
+    "Interval must be a non-negative integer", ["Interval"]))
     pass
 
+if params.ZMC == "":
+    pc.reportError(portal.ParameterError(
+    "Must provide a ZMC URL", ["ZMC"]))
+    pass
+    
+if params.DST == "":
+    pc.reportError(portal.ParameterError(
+    "Must provide a DST URL", ["DST"]))
+    pass
+
+if params.Token == "":
+    pc.reportError(portal.ParameterError(
+    "Must provide a OpenZMS authorization token", ["Token"]))
+    pass
+    
 pc.verifyParameters()
 
-radioInfo = radios.allRadios[params.Radio]
-radioType = radioInfo["type"]
-radioURN  = radioInfo["urn"]
-radioNode = radioInfo["node"]
-radioMonID= radioInfo["monid"]
-radioGain = defaultGains[radioType];
-
-if radioType == "B210":
-    node = request.RawPC(radioNode)
-    node.component_id         = radioNode
-    node.component_manager_id = radioURN
-    node.disk_image           = IMAGE
-else:
-    # Node
-    node = request.RawPC(radioNode + '-host')
-    node.hardware_type = "powder-compute"
-    node.disk_image           = IMAGE
-    node.component_manager_id = radioURN
-
-    radio = request.RawPC('x310')
-    radio.component_id         = radioNode
-    radio.component_manager_id = radioURN
-    
-    # Link between X310 and host -- second interface
-    xiface1 = radio.addInterface("xif1")
-    xiface1.component_id = "eth1"
-    xiface1.addAddress(pg.IPv4Address("192.168.40.2", "255.255.255.0"))
-    hiface1 = node.addInterface("hif1")
-    hiface1.addAddress(pg.IPv4Address("192.168.40.1", "255.255.255.0"))
-
-    link = request.Link("link1")
-    link.addInterface(xiface1)
-    link.addInterface(hiface1)
-    link.bandwidth = 10 * 1000 * 1000 # 10Gbps
-    link.setNoBandwidthShaping();
-    link.setJumboFrames()
-    pass
-
 #
-# Start up X11 VNC for display.
+# Set up the common part of the command
 #
-node.startVNC()
-
-COMMAND += " -t " + radioType + " -r " + radioNode
-COMMAND += " -N '" + params.Radio + "'"
-
-if params.NoRun:
-    COMMAND += " -n"
-    pass
-if params.TestRepo:
-    COMMAND += " -T"
-    pass
-if params.runCount >= 0:
-    COMMAND += " -c " + str(params.runCount)
-    pass
-if params.Gain != "":
-    COMMAND += " -g " + str(params.Gain)
-else:
-    COMMAND += " -g " + str(radioGain)
-    pass
 if params.Interval != "":
-    COMMAND += " -D " + str(params.Interval)
+    COMMAND += " --interval " + str(params.Interval)
     pass
-if params.DST != "":
-    COMMAND += " -Z '" + str(params.DST) + "'"
-    COMMAND += " -A '" + str(params.DSTAuth) + "'"
-    if params.DSTMonID != "":
-        COMMAND += " -I '" + str(params.DSTMonID) + "'"
-    else:
-        COMMAND += " -I '" + radioMonID + "'"
-        pass
-    pass
+COMMAND += " --dst-http " + params.DST
+COMMAND += " --zmc-http " + params.ZMC
+COMMAND += " --element-token " + params.Token
 if params.Range != "":
-    COMMAND += " -R '" + str(params.Range) + "'"
+    COMMAND += " ---range '" + str(params.Range) + "'"
     pass
 
-node.addService(pg.Execute(shell="sh", command=COMMAND))
+count = 0
+for radioname in params.Radios:
+    radioInfo = radios.allRadios[radioname]
+    radioType = radioInfo["type"]
+    radioURN  = radioInfo["urn"]
+    radioNode = radioInfo["node"]
+    radioMonID= radioInfo["monid"]
+    radioGain = defaultGains[radioType];
+    command   = COMMAND
+
+    if radioType == "B210":
+        id = radioNode
+        # FEs are special names.
+        if radioNode != radioname:
+            id = (radioname.split(" "))[0] + "-" + id
+            pass
+        node = request.RawPC(id)
+        node.component_id         = radioNode
+        node.component_manager_id = radioURN
+        node.disk_image           = IMAGE
+    else:
+        # Node
+        node = request.RawPC(radioNode + '-host')
+        node.hardware_type = "powder-compute"
+        node.disk_image           = IMAGE
+        node.component_manager_id = radioURN
+
+        radio = request.RawPC(radioNode)
+        radio.component_id         = radioNode
+        radio.component_manager_id = radioURN
+    
+        # Link between X310 and host -- second interface
+        xiface1 = radio.addInterface("xif1")
+        xiface1.component_id = "eth1"
+        xiface1.addAddress(pg.IPv4Address("192.168.40.2", "255.255.255.0"))
+        hiface1 = node.addInterface("hif1")
+        hiface1.addAddress(pg.IPv4Address("192.168.40.1", "255.255.255.0"))
+
+        link = request.Link("link-" + str(count))
+        link.addInterface(xiface1)
+        link.addInterface(hiface1)
+        link.bandwidth = 10 * 1000 * 1000 # 10Gbps
+        link.setNoBandwidthShaping();
+        link.setJumboFrames()
+        count = count + 1
+        pass
+
+    command += " --monitor-id '" + radioMonID + "'"
+    command += " --gain " + str(radioGain)
+    command += " --monitor-description '" + radioname + "'"
+
+    node.addService(pg.Execute(shell="sh", command=INSTALL))
+    node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
+    node.addService(pg.Execute(shell="sh", command=command))
+    pass
 
 request.addTour(tour)
 
