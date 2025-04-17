@@ -81,7 +81,7 @@ pc.defineParameter("DST", "OpenZMS DST URL",
 
 # Auth Token
 pc.defineParameter("Token", "OpenZMS Token",
-                   portal.ParameterType.STRING, "",
+                   portal.ParameterType.STRING, "rpp_replaceme",
                    longDescription="OpenZMS authorization token")
 
 # Optional install only
@@ -181,7 +181,9 @@ for radioname in params.Radios:
 
     node.addService(pg.Execute(shell="sh", command=INSTALL))
     node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
-    node.addService(pg.Execute(shell="sh", command=command))
+    if not params.NoRun:
+        node.addService(pg.Execute(shell="sh", command=command))
+        pass
     pass
 
 request.addTour(tour)
