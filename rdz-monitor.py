@@ -14,13 +14,38 @@ import subprocess
 import functools
 import shlex
 import base64
+import copy
 from tempfile import mkstemp
+
+#
+# Note from David
+#
+# * If you do monitor state update --status active , being an admin, the
+#   returned MonitorState.Status will be immediately set to active and zmc
+#   will generate a MonitorPending created event telling your monitor to
+#   "go active"; your monitor must push monitor state update --op-status
+#   active
+#
+# * If you do monitor state update --op-status active as the monitor token
+#   from the monitor, you will be "self-activating" and the returned
+#   MonitorState.Status will be active .  In this case, you will not get a
+#   MonitorPending create event, because we look for this case where you have
+#   just set opstatus to active, so nothing needs to be done.
+#
+# * If you do monitor pending create --status active the
+#   MonitorState.Status will be left untouched until the monitor responds to
+#   the MonitorPending event with a MonitorStateUpdate API call, setting
+#   opstatus as commanded, and referencing the last_pending_id.
+#
 
 from zmsclient.zmc.client import ZmsZmcClient
 from zmsclient.dst.client import ZmsDstClient
-from zmsclient.zmc.v1.models import Subscription, EventFilter
+from zmsclient.zmc.v1.models import Subscription, EventFilter, Error, AnyObject
 from zmsclient.dst.v1.models import Observation
 from zmsclient.common.subscription import ZmsSubscriptionCallback
+from zmsclient.zmc.v1.models.monitor_pending import MonitorPending
+from zmsclient.zmc.v1.models.monitor_state import MonitorState
+from zmsclient.zmc.v1.models.update_monitor_state_op_status import UpdateMonitorStateOpStatus
 
 # Boston's monitor.
 MONITOR     = "/usr/bin/rfmonitor";
@@ -33,10 +58,9 @@ LOGFILE     = "/local/logs/rdz-monitor.log"
 LOG = None
 
 # Not sure where to pick these up
-EVENT_TYPE_REPLACED    =     1
-EVENT_TYPE_CREATED     =     2
-EVENT_SOURCETYPE_ZMC   =     2
-EVENT_CODE_GRANT       =     2006
+EVENT_TYPE_CREATED    = 2
+EVENT_SOURCETYPE_ZMC  = 2
+EVENT_CODE_MONITOR_PENDING = 2010
 
 #
 # Heartbeat task
@@ -45,16 +69,47 @@ EVENT_CODE_GRANT       =     2006
 # 3) What else?
 #
 class HeartBeat:
-    def __init__(self):
-        self.state = "running"
-        self.done  = False
+    def __init__(self, monitor):
+        self.monitor = monitor
+        self.done    = False
         pass
     
     async def start(self):
+        LOG.info("Heartbeat starting")
+        await self.monitor.updateOpStatus()
+
         while not self.done:
-            print("HeartBeat sleeping")
-            await asyncio.sleep(5)
-            print("HeartBeat done sleeping")
+            #
+            # Count down till when the next heartbeat needs to go.
+            # Simple for now, maybe a timeout later.
+            #
+            ackby    = self.monitor.state.status_ack_by
+            now      = datetime.datetime.now(datetime.timezone.utc)
+            duration = ackby - now
+            seconds  = duration.total_seconds()
+
+            LOG.info("Heartbeat %r %r %r %r",
+                     ackby, now, duration, seconds)
+
+            if seconds > 20:
+                seconds = seconds - 15
+                LOG.info("Heartbeat sleeping for %r seconds", seconds)
+                while seconds > 0:
+                    await asyncio.sleep(2)
+                    if self.done:
+                        break
+                    seconds -= 2
+                    pass
+                LOG.info("Heartbeat done sleeping")
+                pass
+            
+            if self.done:
+                break;
+
+            LOG.info("Heartbeat posting op status")
+            await self.monitor.updateOpStatus()
+            LOG.info("Heartbeat next ackby is %r",
+                     self.monitor.state.status_ack_by)
             pass
         print("Heartbeat task is exiting")
         pass
@@ -67,19 +122,25 @@ class HeartBeat:
     pass
 
 #
-# Monitor thread. Run the monitor in a thread, looping until told to stop.
+# Monitor thread. Run the monitor, looping until told to stop.
 #
 class Monitor:
     def __init__(self, monitor_id, description, dstclient, zmcclient,
-                 frange=None, gain=None, interval=0):
+                 dynamic=True,
+                 min_freq=0, max_freq=6000, gain=None, interval=0):
         self.monitor_id  = monitor_id
+        self.state       = None
+        self.status      = None
+        self.pending_id  = None
         self.description = description
         self.dstclient   = dstclient
         self.zmcclient   = zmcclient
-        self.monitor_id  = monitor_id
-        self.range       = frange
+        self.min_freq    = min_freq
+        self.max_freq    = max_freq
+        self.dynamic     = dynamic
         self.gain        = gain
         self.interval    = interval
+        self.lock        = asyncio.Lock()
         self.event       = threading.Event()
 
         #
@@ -91,11 +152,23 @@ class Monitor:
         if zmcclient._base_url.find("rdz.powderwireless.net") < 0:
             self.mapOuterMonitor();
             pass
+
+        #
+        # In dynamic mode we need our current state from ZMC.
+        #
+        print("dynamic: " + str(dynamic))
+        if dynamic:
+            # This will throw an error
+            self.getState()
+            pass
+        
         pass
 
     def run(self):
+        # The monitor takes a min_freq-max_freq range argument.
+        range   = str(self.min_freq) + "-" + str(self.max_freq)
         command = MONITOR + " -o -n -g " + str(self.gain) + " "
-        command = command + "-R " + self.range
+        command = command + "-R " + range
         LOG.debug(command)
 
         while not self.event.is_set():
@@ -246,7 +319,97 @@ class Monitor:
         LOG.info("Mapped to inner monitor: %r", mon.id)
         self.monitor_id = mon.id
         pass
+
+    #
+    # Ask the ZNC for our state object.
+    #
+    def getState(self):
+        monitor = self.zmcclient.get_monitor(self.monitor_id, elaborate=True)
+        if not monitor:
+            raise Exception("Could not get the monitor object from the ZMC")
+
+        #
+        # David says:
+        #
+        # If Monitor.Pending is not null and
+        #    Monitor.Pending.Id != Monitor.State.LastPendingId,
+        #  set your Parameters to be Monitor.Pending.Parameters, and then
+        #  heartbeat that you applied that PendingId.
+        #
+        # Or, if Monitor.Pending is null, just make sure to initialize your
+        #  Parameters from Monitor.State.Parameters -- and make sure to pause
+        #  immediately if Monitor.State.Status is paused instead of going active
+        #
+        # This is the basis for the first heartbeat.
+        self.state = monitor.state
+        if (not monitor.pending or
+            monitor.pending.id == monitor.state.last_pending_id):
+            params = self.state.parameters
+
+            # At the moment the params can be null, in which case better have
+            # reasonable command line arguments.
+            if params:
+                self.min_freq = params.min_freq
+                self.max_freq = params.max_freq
+                self.interval = params.interval
+                self.gain = params.gain
+                pass
+            self.status = self.state.status
+            if monitor.pending.id == monitor.state.last_pending_id:
+                self.pending_id = monitor.pending.id
+                pass
+            return
+
+        # At the moment the params can be null, in which case better have
+        # reasonable command line arguments.
+        if monitor.pending.parameters:
+            params = monitor.pending.parameters
+
+            self.min_freq = params.min_freq
+            self.max_freq = params.max_freq
+            self.interval = params.interval
+            self.gain = params.gain
+            pass
+        self.status = monitor.pending.status
+        self.pending_id = monitor.pending.id
+        pass
     
+    async def updateOpStatus(self):
+        LOG.info("Monitor UpdateOpStatus")
+        
+        await self.lock.acquire()
+        opstatus = UpdateMonitorStateOpStatus(
+            op_status = self.status,
+            parameters = AnyObject.from_dict(
+                src_dict={
+                    "min_freq" : int(self.min_freq),
+                    "max_freq" : int(self.max_freq),
+                    "interval" : self.interval,
+                    "gain"     : self.gain,
+                })
+        )
+        # Are we responding to Pending.
+        if self.pending_id:
+            opstatus.last_pending_id = self.pending_id;
+            self.pending_id = None
+            pass
+
+        LOG.info("Monitor UpdateOpStatus: %r", opstatus)
+        
+        state = self.zmcclient.update_monitor_state_op_status(
+            monitor_id=self.monitor_id, body=opstatus)
+        
+        LOG.info("Monitor UpdateOpStatus result: %r", state)
+        
+        if not state:
+            raise Exception("Could not update monitor state")
+        if isinstance(state, Error):
+            raise Exception("Error updating the monitor: " + str(state))
+
+        self.state = state
+        self.lock.release()
+        pass
+
     pass
 
 #
@@ -260,30 +423,34 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
         super(ZMCSubscriptionCallback, self).__init__(zmcclient, **kwargs)
         self.zmcclient = zmcclient
         self.monitor   = monitor
-        self.runstate  = "stopped"
         self.task      = None
         self.done      = False
         pass
 
     async def start(self):
-        LOG.info("ZMCSubscriptionCallback start")
-        self.startMonitor()
+        LOG.info("ZMCSubscriptionCallback start:current status: %r",
+                 self.monitor.status)
+        if self.monitor.status == "active":
+            self.startMonitor()
+            pass
+        LOG.info("ZMCSubscriptionCallback calling run_callbacks")
         await self.run_callbacks()
-        pass
 
-    def on_event(self, ws, evt, message):
+    async def on_event(self, ws, evt, message):
         if evt.header.source_type != EVENT_SOURCETYPE_ZMC:
             LOG.error("on_event: unexpected source type: %r (%r)",
                       evt.header.source_type, message)
             return
 
+        LOG.info("on_event: %r", evt)
+
         # Since we are subscribed to all ZMC events for this element,
         # there will be chatter we do not care about.
-        if (evt.header.code != EVENT_CODE_GRANT):
+        if evt.header.code != EVENT_CODE_MONITOR_PENDING:
             return
 
         try:
-            self.handleEvent(evt.object_)
+            await self.handleEvent(evt.object_)
         except Exception as ex:
             LOG.exception(ex)
             pass
@@ -295,44 +462,72 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
         if self.task:
             self.monitor.event.set()
             self.task = None
-            self.runstate = "stopped"
             pass
         pass
 
-    def handleEvent(self, object):
-        LOG.info("event: %r", object)
+    async def handleEvent(self, pending):
+        LOG.info("handleEvent: %r", pending)
+
+        if pending.status == self.monitor.status:
+            await self.monitor.updateOpStatus()
+            return
+
+        if pending.status == "active":
+            self.startMonitor()
+        else:
+            await self.stopMonitor()
+            pass
+
+        self.monitor.status = pending.status
+        await self.monitor.updateOpStatus()
         pass
     
     def startMonitor(self):
-        LOG.info("startMonitor")
-        self.monitor.event.clear()
-        self.thread = asyncio.to_thread(self.monitor.run)
-        self.task = asyncio.create_task(self.thread)
-        self.runstate = "running"
+        LOG.info("startMonitor: current status: %r", self.monitor.status)
+        if not self.task:
+            self.monitor.event.clear()
+            self.thread = asyncio.to_thread(self.monitor.run)
+            self.task = asyncio.create_task(self.thread)
+            pass
         pass
 
     async def stopMonitor(self):
-        LOG.info("stopMonitor")
+        LOG.info("stopMonitor: current status: %r", self.monitor.status)
         if self.task:
             self.monitor.event.set()
             await self.task
             LOG.info("Monitor has stopped")
             self.task = None
-            self.runstate = "stopped"
             pass
         pass
 
     pass
 
+def ask_exit(signame, loop):
+    LOG.info("got signal %s: exit" % signame)
+    loop.stop()    
 
-# The hander has to be outside the async main.
-def set_signal_handler(signum, task_to_cancel):
-    def handler(_signum, _frame):
-        asyncio.get_running_loop().call_soon_threadsafe(task_to_cancel.cancel)
-    signal.signal(signum, handler)
+async def async_main(*args):
+    loop = asyncio.get_running_loop()
+        
+    for signame in {'SIGINT', 'SIGTERM', 'SIGHUP'}:
+        loop.add_signal_handler(
+            getattr(signal, signame),
+            functools.partial(ask_exit, signame, loop))
+        pass
     pass
 
-def init_main():
+    try:
+        runnable = [sub.start() for sub in args]            
+        await asyncio.gather(*runnable)
+    except asyncio.CancelledError:
+        for sub in args:
+            sub.stop()
+            pass
+        raise
+    pass
+
+def main():
     parser = argparse.ArgumentParser(
         prog="rdz-monitor",
         description="Run the monitor and report results to the RDZ")
@@ -347,11 +542,15 @@ def init_main():
         "--logfile", default=LOGFILE, type=str,
         help="Redirect logging to a file when daemonizing.")
     parser.add_argument(
+        "--no-dynamic", default=False, action="store_true")
+    parser.add_argument(
         "--gain", default=20, type=int)
     parser.add_argument(
-        "--range", type=str, required=True)
+        "--min_freq", type=float, required=True)
     parser.add_argument(
-        "--interval", type=int, default=0, required=False)
+        "--max_freq", type=float, required=True)
+    parser.add_argument(
+        "--interval", type=int, default=10, required=False)
     parser.add_argument(
         "--monitor-id", type=str, required=True)
     parser.add_argument(
@@ -385,57 +584,23 @@ def init_main():
                              detailed=False, raise_on_unexpected_status=True)
 
     monitor   = Monitor(args.monitor_id, args.monitor_description,
-                        dstclient, zmcclient,
-                        frange=args.range, gain=args.gain, interval=args.interval)
-    
-    ZMCsubscription = ZMCSubscriptionCallback(
-        zmcclient, monitor,
-        subscription=Subscription(
-            id=str(uuid.uuid4()), filters=[]),
-        reconnect_on_error=True)
+                        dstclient, zmcclient, dynamic=not args.no_dynamic,
+                        min_freq=args.min_freq, max_freq=args.max_freq,
+                        gain=args.gain, interval=args.interval)
 
-    heartbeat = HeartBeat()
-
-    return ZMCsubscription, heartbeat, args.daemon, args.logfile
-    pass
-
-def ask_exit(signame, loop):
-    LOG.info("got signal %s: exit" % signame)
-    loop.stop()    
-
-async def async_main(*args):
-    if False:
-        this_task = asyncio.current_task();
-        set_signal_handler(signal.SIGINT, this_task)
-        set_signal_handler(signal.SIGHUP, this_task)
-        set_signal_handler(signal.SIGTERM, this_task)
-    else:
-        loop = asyncio.get_running_loop()
-        
-        for signame in {'SIGINT', 'SIGTERM', 'SIGHUP'}:
-            loop.add_signal_handler(
-                getattr(signal, signame),
-                functools.partial(ask_exit, signame, loop))
-            pass
+    ZMCsubscription = None
+    if not args.no_dynamic:
+        ZMCsubscription = ZMCSubscriptionCallback(
+            zmcclient, monitor,
+            subscription=Subscription(
+                id=str(uuid.uuid4()), filters=[]),
+            reconnect_on_error=True)
         pass
-
-    try:
-        runnable = [sub.start() for sub in args]            
-        await asyncio.gather(*runnable)
-    except asyncio.CancelledError:
-        for sub in args:
-            sub.stop()
-            pass
-        raise
-    pass
-
-def main():
-    ZMCsubscription, heartbeat, daemonize, logfile = init_main()
+    
     format = "%(levelname)s:%(asctime)s: %(message)s"
-
-    if daemonize:
+    if args.daemon:
         try:
-            fp = open(logfile, "a");
+            fp = open(args.logfile, "a");
             sys.stdout = fp
             sys.stderr = fp
             sys.stdin.close();
@@ -451,10 +616,15 @@ def main():
         os.setsid();
     else:
         logging.basicConfig(format=format)
+        pass
 
-    subs = [ZMCsubscription, heartbeat]
+    if args.no_dynamic:
+        exit(monitor.run())
+        pass
+
+    subs = [ZMCsubscription, HeartBeat(monitor)]
     asyncio.run(async_main(*subs))
-    exit(0);
+    exit(0)
 
 if __name__ == "__main__":
     main()
