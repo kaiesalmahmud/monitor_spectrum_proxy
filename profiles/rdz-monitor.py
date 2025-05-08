@@ -63,9 +63,9 @@ pc.defineParameter("Interval", "Loop Interval",
                    "if you leave this blank.")
 
 # Range to monitor
-pc.defineParameter("Range", "Frequency Range",
+pc.defineParameter("Range", "Initial Frequency Range",
                    portal.ParameterType.STRING, RANGE,
-                   longDescription="Frequency range to scan. If you leave "+
+                   longDescription="Initial requency range to scan. If you leave "+
                    "blank, defaults to " + RANGE + ".")
 
 # DST Endpoint
@@ -113,6 +113,14 @@ if params.Token == "":
     pc.reportError(portal.ParameterError(
     "Must provide a OpenZMS authorization token", ["Token"]))
     pass
+
+if params.Range != "":
+    tokens = params.Range.split("-")
+    if len(tokens) != 2:
+        pc.reportError(portal.ParameterError(
+            "Invalid Range", ["Range"]))
+        pass
+    pass
     
 pc.verifyParameters()
 
@@ -126,7 +134,9 @@ COMMAND += " --dst-http " + params.DST
 COMMAND += " --zmc-http " + params.ZMC
 COMMAND += " --element-token " + params.Token
 if params.Range != "":
-    COMMAND += " --range '" + str(params.Range) + "'"
+    tokens = params.Range.split("-")
+    COMMAND += " --min_freq " + str(tokens[0])
+    COMMAND += " --max_freq " + str(tokens[1])
     pass
 
 count = 0

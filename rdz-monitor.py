@@ -15,6 +15,7 @@ import functools
 import shlex
 import base64
 import copy
+import httpx
 from tempfile import mkstemp
 
 #
@@ -91,8 +92,8 @@ class HeartBeat:
             LOG.info("Heartbeat %r %r %r %r",
                      ackby, now, duration, seconds)
 
-            if seconds > 20:
-                seconds = seconds - 15
+            if seconds > 60:
+                seconds = seconds - 45
                 LOG.info("Heartbeat sleeping for %r seconds", seconds)
                 while seconds > 0:
                     await asyncio.sleep(2)
@@ -127,7 +128,7 @@ class HeartBeat:
 class Monitor:
     def __init__(self, monitor_id, description, dstclient, zmcclient,
                  dynamic=True,
-                 min_freq=0, max_freq=6000, gain=None, interval=0):
+                 min_freq=0, max_freq=6000, gain=10, interval=10):
         self.monitor_id  = monitor_id
         self.state       = None
         self.status      = None
@@ -137,9 +138,9 @@ class Monitor:
         self.zmcclient   = zmcclient
         self.min_freq    = min_freq
         self.max_freq    = max_freq
-        self.dynamic     = dynamic
         self.gain        = gain
         self.interval    = interval
+        self.dynamic     = dynamic
         self.lock        = asyncio.Lock()
         self.event       = threading.Event()
 
@@ -160,8 +161,29 @@ class Monitor:
         if dynamic:
             # This will throw an error
             self.getState()
+            #
+            # When starting up, if the status is not active or paused,
+            # then we force active. In other words, only "paused" means
+            # the monitor should not send observations. 
+            #
+            if self.status != "paused" and self.status != "active":
+                self.status = "active"
+                pass
+        else:
+            # Not dynamic, always start up.
+            self.status = "active";
             pass
         
+        pass
+
+    # Update parameters from an any_object. Yuck
+    def updateParamsFromAnyObject(self, parameters):
+        params = parameters.to_dict()
+        for param in ["min_freq", "max_freq", "gain", "interval"]:
+            if param in params:
+                setattr(self, param, params[param])
+                pass
+            pass
         pass
 
     def run(self):
@@ -169,7 +191,7 @@ class Monitor:
         range   = str(self.min_freq) + "-" + str(self.max_freq)
         command = MONITOR + " -o -n -g " + str(self.gain) + " "
         command = command + "-R " + range
-        LOG.debug(command)
+        LOG.info(command)
 
         while not self.event.is_set():
             LOG.info("Monitor doing something")
@@ -341,18 +363,16 @@ class Monitor:
         #  immediately if Monitor.State.Status is paused instead of going active
         #
         # This is the basis for the first heartbeat.
+        #
         self.state = monitor.state
+
         if (not monitor.pending or
             monitor.pending.id == monitor.state.last_pending_id):
-            params = self.state.parameters
 
             # At the moment the params can be null, in which case better have
             # reasonable command line arguments.
-            if params:
-                self.min_freq = params.min_freq
-                self.max_freq = params.max_freq
-                self.interval = params.interval
-                self.gain = params.gain
+            if monitor.state.parameters:
+                self.updateParamsFromAnyObject(monitor.state.parameters)
                 pass
             self.status = self.state.status
             if monitor.pending.id == monitor.state.last_pending_id:
@@ -363,12 +383,7 @@ class Monitor:
         # At the moment the params can be null, in which case better have
         # reasonable command line arguments.
         if monitor.pending.parameters:
-            params = monitor.pending.parameters
-
-            self.min_freq = params.min_freq
-            self.max_freq = params.max_freq
-            self.interval = params.interval
-            self.gain = params.gain
+            self.updateParamsFromAnyObject(monitor.pending.parameters)
             pass
         self.status = monitor.pending.status
         self.pending_id = monitor.pending.id
@@ -378,6 +393,7 @@ class Monitor:
         LOG.info("Monitor UpdateOpStatus")
         
         await self.lock.acquire()
+        
         opstatus = UpdateMonitorStateOpStatus(
             op_status = self.status,
             parameters = AnyObject.from_dict(
@@ -399,7 +415,7 @@ class Monitor:
         state = self.zmcclient.update_monitor_state_op_status(
             monitor_id=self.monitor_id, body=opstatus)
         
-        LOG.info("Monitor UpdateOpStatus result: %r", state)
+        #LOG.info("Monitor UpdateOpStatus result: %r", state)
         
         if not state:
             raise Exception("Could not update monitor state")
@@ -442,7 +458,7 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
                       evt.header.source_type, message)
             return
 
-        LOG.info("on_event: %r", evt)
+        #LOG.info("on_event: %r", evt)
 
         # Since we are subscribed to all ZMC events for this element,
         # there will be chatter we do not care about.
@@ -468,17 +484,58 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
     async def handleEvent(self, pending):
         LOG.info("handleEvent: %r", pending)
 
-        if pending.status == self.monitor.status:
-            await self.monitor.updateOpStatus()
+        #
+        # Hmm, does it make sense to change parameters when pausing? 
+        #
+        if pending.status != "active":
+            await self.monitor.lock.acquire()
+            await self.stopMonitor()
+            self.monitor.pending_id = pending.id
+            self.monitor.status = pending.status
+            self.monitor.lock.release()
+            await self.monitor.updateOpStatus();
             return
 
-        if pending.status == "active":
-            self.startMonitor()
-        else:
-            await self.stopMonitor()
+        #
+        # Have to watch for changes to the parameters;
+        #
+        restart = False
+        if pending.parameters:
+            for param in ["min_freq", "max_freq", "gain", "interval"]:
+                if (param in pending.parameters and
+                    getattr(self.monitor, param) != pending.parameters[param]):
+                    restart = True
+                    pass
+                pass
             pass
 
+        #
+        # If already active and no restart needed, then ack and done.
+        #
+        if self.monitor.status == "active" and restart == False:
+            # No need to lock here for this one change.
+            self.monitor.pending_id = pending.id
+            await self.monitor.updateOpStatus();
+            return
+
+        # Parameters changed, need to stop and restart
+        if self.monitor.status == "active" and restart:
+            await self.stopMonitor()
+            pass
+        
+        #
+        # Lock out the heartbeat while making the changes.
+        #
+        await self.monitor.lock.acquire()
+        if pending.parameters:
+            self.monitor.updateParamsFromAnyObject(pending.parameters)
+            pass
+
+        # Start the monitor with new params
+        self.startMonitor()
+        self.monitor.pending_id = pending.id
         self.monitor.status = pending.status
+        self.monitor.lock.release()
         await self.monitor.updateOpStatus()
         pass
     
@@ -579,9 +636,12 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     dstclient = ZmsDstClient(args.dst_http, args.element_token,
-                             detailed=False, raise_on_unexpected_status=True)
+                             detailed=False, raise_on_unexpected_status=True,
+                             httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
+
     zmcclient = ZmsZmcClient(args.zmc_http, args.element_token,
-                             detailed=False, raise_on_unexpected_status=True)
+                             detailed=False, raise_on_unexpected_status=True,
+                             httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
 
     monitor   = Monitor(args.monitor_id, args.monitor_description,
                         dstclient, zmcclient, dynamic=not args.no_dynamic,
