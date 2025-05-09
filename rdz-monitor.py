@@ -5,6 +5,7 @@ import uuid
 import os
 import sys
 import signal
+import traceback
 import argparse
 import logging
 import datetime
@@ -46,6 +47,7 @@ from zmsclient.dst.v1.models import Observation
 from zmsclient.common.subscription import ZmsSubscriptionCallback
 from zmsclient.zmc.v1.models.monitor_pending import MonitorPending
 from zmsclient.zmc.v1.models.monitor_state import MonitorState
+from zmsclient.zmc.v1.models.monitor_op_status import MonitorOpStatus
 from zmsclient.zmc.v1.models.update_monitor_state_op_status import UpdateMonitorStateOpStatus
 
 # Boston's monitor.
@@ -77,8 +79,12 @@ class HeartBeat:
     
     async def start(self):
         LOG.info("Heartbeat starting")
-        await self.monitor.updateOpStatus()
-
+        try:
+            await self.monitor.updateOpStatus()
+        except Exception as exc:
+            LOG.exception(exc)
+            return;
+        
         while not self.done:
             #
             # Count down till when the next heartbeat needs to go.
@@ -89,8 +95,7 @@ class HeartBeat:
             duration = ackby - now
             seconds  = duration.total_seconds()
 
-            LOG.info("Heartbeat %r %r %r %r",
-                     ackby, now, duration, seconds)
+            LOG.debug("Heartbeat %r %r %r %r", ackby, now, duration, seconds)
 
             if seconds > 60:
                 seconds = seconds - 45
@@ -107,17 +112,18 @@ class HeartBeat:
             if self.done:
                 break;
 
-            LOG.info("Heartbeat posting op status")
             await self.monitor.updateOpStatus()
             LOG.info("Heartbeat next ackby is %r",
                      self.monitor.state.status_ack_by)
             pass
-        print("Heartbeat task is exiting")
+        LOG.info("Heartbeat task is exiting")
         pass
 
-    def stop(self):
-        print("HeartBeat stopping")
+    async def stop(self):
+        LOG.info("HeartBeat stopping")
         self.done = True
+        # Fix this.
+        await asyncio.sleep(3)
         pass
 
     pass
@@ -142,7 +148,7 @@ class Monitor:
         self.interval    = interval
         self.dynamic     = dynamic
         self.lock        = asyncio.Lock()
-        self.event       = threading.Event()
+        self._stop       = False
 
         #
         # Must map outer monitor to inner monitor for rdzinrdz.
@@ -157,7 +163,6 @@ class Monitor:
         #
         # In dynamic mode we need our current state from ZMC.
         #
-        print("dynamic: " + str(dynamic))
         if dynamic:
             # This will throw an error
             self.getState()
@@ -187,13 +192,15 @@ class Monitor:
         pass
 
     def run(self):
+        self._stop = False
+        
         # The monitor takes a min_freq-max_freq range argument.
         range   = str(self.min_freq) + "-" + str(self.max_freq)
         command = MONITOR + " -o -n -g " + str(self.gain) + " "
         command = command + "-R " + range
         LOG.info(command)
 
-        while not self.event.is_set():
+        while not self._stop:
             LOG.info("Monitor doing something")
             #
             # Have to redirect the data to a file since UHD pollutes
@@ -229,8 +236,13 @@ class Monitor:
                     pass
                 LOG.debug("Monitor is done")
                 self.child.wait()
+                if self.child.returncode == 0:
+                    self.upload(fname)
+                    pass
                 self.child = None
-                self.upload(fname)
+                
+                if self._stop:
+                    break
 
                 #
                 # We do not want to blocking sleep for a long time since then
@@ -240,7 +252,7 @@ class Monitor:
                     count = self.interval
                     while count > 0:
                         time.sleep(1)
-                        if self.event.is_set():
+                        if self._stop:
                             break
                         count -= 1
                         pass
@@ -256,6 +268,13 @@ class Monitor:
                     pass
             pass
         LOG.info("Monitor task is exiting")
+        pass
+
+    async def stop(self):
+        self._stop = True
+        if self.child:
+            self.child.terminate()
+            pass
         pass
     
     #
@@ -375,7 +394,7 @@ class Monitor:
                 self.updateParamsFromAnyObject(monitor.state.parameters)
                 pass
             self.status = self.state.status
-            if monitor.pending.id == monitor.state.last_pending_id:
+            if monitor.pending and monitor.pending.id == monitor.state.last_pending_id:
                 self.pending_id = monitor.pending.id
                 pass
             return
@@ -393,9 +412,15 @@ class Monitor:
         LOG.info("Monitor UpdateOpStatus")
         
         await self.lock.acquire()
+
+        # Too bad the generated api code could deal with plain strings.
+        op_status = self.status
+        if type(op_status) == str:
+            op_status = MonitorOpStatus(op_status)
+            pass
         
         opstatus = UpdateMonitorStateOpStatus(
-            op_status = self.status,
+            op_status = op_status,
             parameters = AnyObject.from_dict(
                 src_dict={
                     "min_freq" : int(self.min_freq),
@@ -472,13 +497,10 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
             pass
         pass
 
-    def stop(self):
+    async def stop(self):
         LOG.info("ZMCSubscriptionCallback stop")
         self.done = True
-        if self.task:
-            self.monitor.event.set()
-            self.task = None
-            pass
+        await self.monitor.stop()
         pass
 
     async def handleEvent(self, pending):
@@ -494,6 +516,9 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
             self.monitor.status = pending.status
             self.monitor.lock.release()
             await self.monitor.updateOpStatus();
+            if pending.status != "paused":
+                sys.exit(2)
+                pass
             return
 
         #
@@ -542,7 +567,6 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
     def startMonitor(self):
         LOG.info("startMonitor: current status: %r", self.monitor.status)
         if not self.task:
-            self.monitor.event.clear()
             self.thread = asyncio.to_thread(self.monitor.run)
             self.task = asyncio.create_task(self.thread)
             pass
@@ -551,7 +575,7 @@ class ZMCSubscriptionCallback(ZmsSubscriptionCallback):
     async def stopMonitor(self):
         LOG.info("stopMonitor: current status: %r", self.monitor.status)
         if self.task:
-            self.monitor.event.set()
+            self.monitor.stop()
             await self.task
             LOG.info("Monitor has stopped")
             self.task = None
@@ -579,7 +603,7 @@ async def async_main(*args):
         await asyncio.gather(*runnable)
     except asyncio.CancelledError:
         for sub in args:
-            sub.stop()
+            await sub.stop()
             pass
         raise
     pass
