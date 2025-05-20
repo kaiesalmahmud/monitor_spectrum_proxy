@@ -99,17 +99,17 @@ if params.Interval != "" and params.Interval < 0:
     "Interval must be a non-negative integer", ["Interval"]))
     pass
 
-if params.ZMC == "":
+if False and params.ZMC == "":
     pc.reportError(portal.ParameterError(
     "Must provide a ZMC URL", ["ZMC"]))
     pass
     
-if params.DST == "":
+if False and params.DST == "":
     pc.reportError(portal.ParameterError(
     "Must provide a DST URL", ["DST"]))
     pass
 
-if params.Token == "":
+if False and params.Token == "":
     pc.reportError(portal.ParameterError(
     "Must provide a OpenZMS authorization token", ["Token"]))
     pass
