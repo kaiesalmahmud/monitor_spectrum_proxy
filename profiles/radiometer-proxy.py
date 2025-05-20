@@ -114,7 +114,7 @@ if params.Token == "":
     "Must provide a OpenZMS authorization token", ["Token"]))
     pass
 
-print("Using dynamic RANGE:", RANGE)  # kaies - print range
+# print("Using dynamic RANGE:", RANGE)  # kaies - print range
 
 if params.Range != "":
     tokens = params.Range.split("-")
