@@ -285,7 +285,13 @@ class Monitor:
     # Construct the observation and send it up.
     #
     def upload(self, fname):
+        min_freq = None
+        max_freq = None
+        header   = "frequency,power";
+
         LOG.info("Monitor reading from " + fname)
+
+        # ---- Send via HTTP POST to radiometer proxy ----
 
         try:
             # Read CSV into DataFrame
@@ -335,6 +341,66 @@ class Monitor:
         except Exception as e:
             LOG.error("Error in upload()")
             LOG.exception(e)
+
+        # --------------------------------------------------------------
+
+        with open(fname, "r") as f:
+            centered = False;
+            
+            #
+            # First line tells us what is included (center_freq is optional).
+            # Also get the min_freq from the first line.
+            #
+            line = f.readline().rstrip()
+            tokens = line.split(",")
+            min_freq = float(tokens[2])
+            
+            if len(tokens) >= 5:
+                header += ",center_freq"
+                centered = True
+                pass
+
+            data = header + "\n"
+            if centered:
+                data += "%s,%s,%s\n" % (tokens[2],tokens[3],tokens[4])
+            else:
+                data += "%s,%s\n" % (tokens[2],tokens[3])
+                pass
+
+            for line in f:
+                line = line.rstrip()
+                tokens = line.split(",")
+
+                if centered:
+                    data += "%s,%s,%s\n" % (tokens[2],tokens[3],tokens[4])
+                else:
+                    data += "%s,%s\n" % (tokens[2],tokens[3])
+                    pass
+                pass
+    
+            max_freq = float(tokens[2])
+            pass
+
+        observation = Observation(
+            monitor_id  = self.monitor_id,
+	    description = self.description,
+	    types       = "ota,sweep",
+	    format_     = "psd-csv-ota",
+	    min_freq    = int(min_freq * 1000000),
+	    max_freq    = int(max_freq * 1000000),
+            starts_at   = datetime.datetime.now(datetime.timezone.utc),
+        )
+        #print(str(observation))
+        # After print
+        observation.data = base64.b64encode(data.encode("ascii")).decode()
+
+        LOG.info("Monitor pushing observation.data")
+        response = self.dstclient.create_observation(body=observation)
+        if not response:
+            LOG.info("Could not create new observation")
+            pass
+        LOG.debug(response)
+        pass
 
 
     #
