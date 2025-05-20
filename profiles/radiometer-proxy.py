@@ -207,6 +207,7 @@ for radioname in params.Radios:
     node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
     if not params.NoRun:
         node.addService(pg.Execute(shell="sh", command=probe))
+        node.addService(pg.Execute(shell="sh", command="nohup python3 /local/repository/server.py > /local/logs/server.log 2>&1 &"))  # kaies
         node.addService(pg.Execute(shell="sh", command=command))
         pass
     pass
