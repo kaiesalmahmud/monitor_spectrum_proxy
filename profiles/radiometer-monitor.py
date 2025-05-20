@@ -22,8 +22,9 @@ tour.Description(ig.Tour.TEXT, "Allocate all radios and run the monitor");
 IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GR310"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 INSTALL   = "/local/repository/install.sh"
-INSTALLZMS= "/local/repository/install-zmsclient.sh"  # do I need this?
+INSTALLZMS= "/local/repository/install-zmsclient.sh"
 COMMAND   = "sudo /local/repository/kaies-monitor.py --daemon  "
+INSTALLNGINX= "/local/repository/install-nginx.sh"
 PROBE     = "/local/repository/probe.pl  "
 RANGE     = "3350e6-3750e6"
 INTERVAL  = 10
@@ -90,6 +91,11 @@ pc.defineParameter("NoRun", "Install Only",
                    portal.ParameterType.BOOLEAN, False,
                    longDescription="Install but do not run the monitor.")
 
+# Auth Token
+pc.defineParameter("RadiometerProxyIP", "IP Address for Proxy",
+                   portal.ParameterType.STRING, "",
+                   longDescription="IP Address for Proxy")
+
 # Retrieve the values the user specifies during instantiation.
 params = pc.bindParameters()
 
@@ -99,17 +105,17 @@ if params.Interval != "" and params.Interval < 0:
     "Interval must be a non-negative integer", ["Interval"]))
     pass
 
-if params.ZMC == "":
+if False and params.ZMC == "":
     pc.reportError(portal.ParameterError(
     "Must provide a ZMC URL", ["ZMC"]))
     pass
     
-if params.DST == "":
+if False and params.DST == "":
     pc.reportError(portal.ParameterError(
     "Must provide a DST URL", ["DST"]))
     pass
 
-if params.Token == "":
+if False and params.Token == "":
     pc.reportError(portal.ParameterError(
     "Must provide a OpenZMS authorization token", ["Token"]))
     pass
@@ -130,13 +136,19 @@ pc.verifyParameters()
 if params.Interval != "":
     COMMAND += " --interval " + str(params.Interval)
     pass
-COMMAND += " --dst-http " + params.DST
-COMMAND += " --zmc-http " + params.ZMC
-COMMAND += " --element-token " + params.Token
+if params.DST != "":
+    COMMAND += " --dst-http " + params.DST
+if params.ZMC != "":
+    COMMAND += " --zmc-http " + params.ZMC
+if params.Token != "":
+    COMMAND += " --element-token " + params.Token
 if params.Range != "":
     tokens = params.Range.split("-")
     COMMAND += " --min_freq " + str(tokens[0])
     COMMAND += " --max_freq " + str(tokens[1])
+    pass
+if params.RadiometerProxyIP != "":
+    COMMAND += " --rad-proxy-ip " + params.RadiometerProxyIP
     pass
 
 count = 0
@@ -195,6 +207,7 @@ for radioname in params.Radios:
 
     node.addService(pg.Execute(shell="sh", command=INSTALL))
     node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
+    node.addService(pg.Execute(shell="sh", command=INSTALLNGINX))
     if not params.NoRun:
         node.addService(pg.Execute(shell="sh", command=probe))
         node.addService(pg.Execute(shell="sh", command=command))

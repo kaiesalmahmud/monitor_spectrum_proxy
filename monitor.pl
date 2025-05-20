@@ -22,11 +22,12 @@ sub usage()
     print STDOUT "Usage: monitor [-dniV] [-t type] [-r radio]\n";
     exit(-1);
 }
-my $optlist     = "dniVr:t:c:WD:STg:R:Z:A:I:N:K";
+my $optlist     = "dniVEr:t:c:WD:STg:R:Z:A:I:N:K";
 my $noaction    = 0;
 my $debug       = 0;
 my $noinstall   = 0;
 my $viewer      = 0;
+my $norun	    = 0;
 my $websave     = 0;
 my $dosubdir    = 0;
 my $nofail      = 0;
@@ -114,6 +115,9 @@ if (defined($options{"n"})) {
 }
 if (defined($options{"V"})) {
     $viewer = 1;
+}
+if (defined($options{"E"})) {
+    $norun = 1;
 }
 if (defined($options{"K"})) {
     $nofail = 1;
@@ -285,6 +289,8 @@ if ($viewer) {
     }
     system("$MONITOR -g $gain -s 127.0.0.1 -p 12237");
     exit(0);
+} elsif ($norun) {
+	exit(0);
 }
 
 #

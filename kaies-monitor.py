@@ -138,7 +138,7 @@ class HeartBeat:
 class Monitor:
     def __init__(self, monitor_id, description, dstclient, zmcclient,
                  dynamic=True,
-                 min_freq=0, max_freq=6000, gain=10, interval=10):
+                 min_freq=0, max_freq=6000, gain=10, interval=10, rad_proxy_ip=None):
         self.monitor_id  = monitor_id
         self.state       = None
         self.status      = None
@@ -153,6 +153,7 @@ class Monitor:
         self.dynamic     = dynamic
         self.lock        = asyncio.Lock()
         self._stop       = False
+        rad_proxy_ip = rad_proxy_ip
 
         #
         # Must map outer monitor to inner monitor for rdzinrdz.
@@ -160,7 +161,7 @@ class Monitor:
         #
         # This will raise an exception if it fails
         #
-        if zmcclient._base_url.find("rdz.powderwireless.net") < 0:
+        if zmcclient and zmcclient._base_url.find("rdz.powderwireless.net") < 0:
             self.mapOuterMonitor();
             pass
 
@@ -335,7 +336,7 @@ class Monitor:
             }
 
             # Replace with your Flask server IP
-            response = requests.post("http://<COMPUTER_A_IP>:5000/update_range", json=payload)
+            response = requests.post(f"http://{self.rad_proxy_ip}:5000/update_range", json=payload)
             LOG.info(f"Server response: {response.status_code}, {response.text}")
 
         except Exception as e:
@@ -381,27 +382,37 @@ class Monitor:
             max_freq = float(tokens[2])
             pass
 
-        observation = Observation(
-            monitor_id  = self.monitor_id,
-	    description = self.description,
-	    types       = "ota,sweep",
-	    format_     = "psd-csv-ota",
-	    min_freq    = int(min_freq * 1000000),
-	    max_freq    = int(max_freq * 1000000),
-            starts_at   = datetime.datetime.now(datetime.timezone.utc),
-        )
-        #print(str(observation))
-        # After print
-        observation.data = base64.b64encode(data.encode("ascii")).decode()
+        if self.dstclient:
+            observation = Observation(
+                monitor_id  = self.monitor_id,
+            description = self.description,
+            types       = "ota,sweep",
+            format_     = "psd-csv-ota",
+            min_freq    = int(min_freq * 1000000),
+            max_freq    = int(max_freq * 1000000),
+                starts_at   = datetime.datetime.now(datetime.timezone.utc),
+            )
+            #print(str(observation))
+            # After print
+            observation.data = base64.b64encode(data.encode("ascii")).decode()
 
-        LOG.info("Monitor pushing observation.data")
-        response = self.dstclient.create_observation(body=observation)
-        if not response:
-            LOG.info("Could not create new observation")
+            LOG.info("Monitor pushing observation.data")
+            response = self.dstclient.create_observation(body=observation)
+            if not response:
+                LOG.info("Could not create new observation")
+                pass
+            LOG.debug(response)
             pass
-        LOG.debug(response)
-        pass
 
+        webdir = "/local/www"
+        subdir = time.strftime("20%y-%m-%d", time.time())
+        os.makedirs(subdir, exist_ok=True)
+        ofname = "monitor-rf0-%d.csv" % (int(time.time()));
+        fofname = os.path.join(webdir, subdir, ofname)
+        with open(fofname, "w") as f:
+            f.write(data)
+            pass
+        os.system(f"gzip {fofname}")
 
     #
     # When reporting to an RDZinRDZ, we have to map the outer monitor ID to
@@ -691,18 +702,21 @@ def main():
     parser.add_argument(
         "--interval", type=int, default=10, required=False)
     parser.add_argument(
-        "--monitor-id", type=str, required=True)
+        "--monitor-id", type=str, required=False)
     parser.add_argument(
-        "--monitor-description", type=str, required=True)
+        "--monitor-description", type=str, required=False)
     parser.add_argument(
-        "--element-token", type=str, required=True,
+        "--element-token", type=str, required=False,
         help="Element token")
     parser.add_argument(
-        "--zmc-http", type=str, required=True,
+        "--zmc-http", type=str, required=False,
         help="ZMC URL")
     parser.add_argument(
-        "--dst-http", type=str, required=True,
+        "--dst-http", type=str, required=False,
         help="DST URL")
+    parser.add_argument(
+        "--rad-proxy-ip", type=str, required=True,
+        help="IP address of the radiometer proxy")
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -717,13 +731,17 @@ def main():
     if args.debug > 1:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    dstclient = ZmsDstClient(args.dst_http, args.element_token,
-                             detailed=False, raise_on_unexpected_status=True,
-                             httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
+    dstclient = None
+    if args.DST != "":
+        dstclient = ZmsDstClient(args.dst_http, args.element_token,
+                                 detailed=False, raise_on_unexpected_status=True,
+                                 httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
 
-    zmcclient = ZmsZmcClient(args.zmc_http, args.element_token,
-                             detailed=False, raise_on_unexpected_status=True,
-                             httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
+    zmcclient = None
+    if args.ZMC != "":
+        zmcclient = ZmsZmcClient(args.zmc_http, args.element_token,
+                                 detailed=False, raise_on_unexpected_status=True,
+                                 httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
 
     monitor   = Monitor(args.monitor_id, args.monitor_description,
                         dstclient, zmcclient, dynamic=not args.no_dynamic,

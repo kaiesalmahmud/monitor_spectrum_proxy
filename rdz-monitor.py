@@ -193,14 +193,22 @@ class Monitor:
 
     def run(self):
         self._stop = False
-        
-        # The monitor takes a min_freq-max_freq range argument.
-        range   = str(self.min_freq) + "-" + str(self.max_freq)
-        command = MONITOR + " -o -n -g " + str(self.gain) + " "
-        command = command + "-R " + range
-        LOG.info(command)
 
         while not self._stop:
+
+            # kaies - dynamic range
+            try:
+                with open("/local/repository/freq_range.txt", "r") as f:
+                    RANGE = f.read().strip()
+            except:
+                RANGE = "3350e6-3750e6"  # Fallback default
+
+            # The monitor takes a min_freq-max_freq range argument.
+            range   = str(self.min_freq) + "-" + str(self.max_freq)
+            command = MONITOR + " -o -n -g " + str(self.gain) + " "
+            command = command + "-R " + range
+            LOG.info(command)
+
             LOG.info("Monitor doing something")
             #
             # Have to redirect the data to a file since UHD pollutes

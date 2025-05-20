@@ -23,17 +23,9 @@ IMAGE     = "urn:publicid:IDN+emulab.net+image+emulab-ops//UBUNTU22-64-GR310"
 MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 INSTALL   = "/local/repository/install.sh"
 INSTALLZMS= "/local/repository/install-zmsclient.sh"
-COMMAND   = "sudo /local/repository/rdz-monitor.py --daemon  "
+COMMAND   = "sudo /local/repository/rdz-monitor.py --daemon --no-dynamic"
 PROBE     = "/local/repository/probe.pl  "
-
-# kaies - dynamic range
-try:
-    with open("/local/repository/freq_range.txt", "r") as f:
-        RANGE = f.read().strip()
-except:
-    RANGE = "3350e6-3750e6"  # Fallback default
-
-
+RANGE     = "3350e6-3750e6"
 INTERVAL  = 10
 
 # Default gains by RadioType.
@@ -207,7 +199,7 @@ for radioname in params.Radios:
     node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
     if not params.NoRun:
         node.addService(pg.Execute(shell="sh", command=probe))
-        node.addService(pg.Execute(shell="sh", command="nohup python3 /local/repository/server.py > /local/logs/server.log 2>&1 &"))  # kaies
+        node.addService(pg.Execute(shell="sh", command="nohup python3 /local/repository/flask_server.py > /local/logs/server.log 2>&1 &"))  # kaies
         node.addService(pg.Execute(shell="sh", command=command))
         pass
     pass
