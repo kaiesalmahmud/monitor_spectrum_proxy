@@ -732,13 +732,13 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     dstclient = None
-    if args.dst_http != "":
+    if args.dst_http:
         dstclient = ZmsDstClient(args.dst_http, args.element_token,
                                  detailed=False, raise_on_unexpected_status=True,
                                  httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
 
     zmcclient = None
-    if args.zmc_http != "":
+    if args.zmc_http:
         zmcclient = ZmsZmcClient(args.zmc_http, args.element_token,
                                  detailed=False, raise_on_unexpected_status=True,
                                  httpx_args={"transport" : httpx.HTTPTransport(retries=3)})

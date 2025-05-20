@@ -641,17 +641,17 @@ def main():
     parser.add_argument(
         "--interval", type=int, default=10, required=False)
     parser.add_argument(
-        "--monitor-id", type=str, required=True)
+        "--monitor-id", type=str, required=False)
     parser.add_argument(
-        "--monitor-description", type=str, required=True)
+        "--monitor-description", type=str, required=False)
     parser.add_argument(
-        "--element-token", type=str, required=True,
+        "--element-token", type=str, required=False,
         help="Element token")
     parser.add_argument(
-        "--zmc-http", type=str, required=True,
+        "--zmc-http", type=str, required=False,
         help="ZMC URL")
     parser.add_argument(
-        "--dst-http", type=str, required=True,
+        "--dst-http", type=str, required=False,
         help="DST URL")
 
     args = parser.parse_args(sys.argv[1:])
@@ -667,13 +667,17 @@ def main():
     if args.debug > 1:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    dstclient = ZmsDstClient(args.dst_http, args.element_token,
-                             detailed=False, raise_on_unexpected_status=True,
-                             httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
+    dstclient = None
+    if args.dst_http:
+        dstclient = ZmsDstClient(args.dst_http, args.element_token,
+                                 detailed=False, raise_on_unexpected_status=True,
+                                 httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
 
-    zmcclient = ZmsZmcClient(args.zmc_http, args.element_token,
-                             detailed=False, raise_on_unexpected_status=True,
-                             httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
+    zmcclient = None
+    if args.zmc_http:
+        zmcclient = ZmsZmcClient(args.zmc_http, args.element_token,
+                                 detailed=False, raise_on_unexpected_status=True,
+                                 httpx_args={"transport" : httpx.HTTPTransport(retries=3)})
 
     monitor   = Monitor(args.monitor_id, args.monitor_description,
                         dstclient, zmcclient, dynamic=not args.no_dynamic,
