@@ -405,7 +405,7 @@ class Monitor:
             pass
 
         webdir = "/local/www"
-        subdir = time.strftime("20%y-%m-%d", time.time())
+        subdir = time.strftime("20%y-%m-%d", time.localtime())
         os.makedirs(subdir, exist_ok=True)
         ofname = "monitor-rf0-%d.csv" % (int(time.time()));
         fofname = os.path.join(webdir, subdir, ofname)
