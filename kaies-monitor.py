@@ -406,7 +406,7 @@ class Monitor:
 
         webdir = "/local/www"
         subdir = time.strftime("20%y-%m-%d", time.localtime())
-        os.makedirs(subdir, exist_ok=True)
+        os.makedirs(os.path.join(webdir, subdir), exist_ok=True)
         ofname = "monitor-rf0-%d.csv" % (int(time.time()));
         fofname = os.path.join(webdir, subdir, ofname)
         with open(fofname, "w") as f:
