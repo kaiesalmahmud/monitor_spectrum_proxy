@@ -301,7 +301,47 @@ class Monitor:
         try:
             # Read CSV into DataFrame
 
-            df = pd.read_csv(fname, skiprows=1, names=["frequency", "power"])
+            # df = pd.read_csv(fname, skiprows=1, names=["frequency", "power"])
+
+            with open(fname, "r") as f:
+                centered = False
+
+                # Read the first line (header or metadata)
+                line = f.readline().rstrip()
+                tokens = line.split(",")
+                min_freq = float(tokens[2])  # First data line: use 3rd token as min_freq
+
+                # Determine if center_freq is included
+                if len(tokens) >= 5:
+                    centered = True
+
+                # Create a list to store rows
+                data_rows = []
+
+                # Append the first line's data
+                if centered:
+                    data_rows.append([float(tokens[2]), float(tokens[3]), float(tokens[4])])
+                else:
+                    data_rows.append([float(tokens[2]), float(tokens[3])])
+
+                # Process remaining lines
+                for line in f:
+                    tokens = line.rstrip().split(",")
+
+                    if centered:
+                        row = [float(tokens[2]), float(tokens[3]), float(tokens[4])]
+                    else:
+                        row = [float(tokens[2]), float(tokens[3])]
+                    data_rows.append(row)
+
+                # Last frequency is the max frequency
+                max_freq = float(tokens[2])
+
+            # Create DataFrame with appropriate column names
+            if centered:
+                df = pd.DataFrame(data_rows, columns=["frequency", "power", "center_freq"])
+            else:
+                df = pd.DataFrame(data_rows, columns=["frequency", "power"])
 
             # Filter desired frequency range
             filtered_df = df[(df['frequency'] >= 3200) & (df['frequency'] <= 3600)]
