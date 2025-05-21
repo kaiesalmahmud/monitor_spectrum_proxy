@@ -335,26 +335,37 @@ class Monitor:
             max_freq = float(tokens[2])
             pass
 
-        observation = Observation(
-            monitor_id  = self.monitor_id,
-	    description = self.description,
-	    types       = "ota,sweep",
-	    format_     = "psd-csv-ota",
-	    min_freq    = int(min_freq * 1000000),
-	    max_freq    = int(max_freq * 1000000),
-            starts_at   = datetime.datetime.now(datetime.timezone.utc),
-        )
-        #print(str(observation))
-        # After print
-        observation.data = base64.b64encode(data.encode("ascii")).decode()
+        if self.dstclient:
+            observation = Observation(
+                monitor_id  = self.monitor_id,
+            description = self.description,
+            types       = "ota,sweep",
+            format_     = "psd-csv-ota",
+            min_freq    = int(min_freq * 1000000),
+            max_freq    = int(max_freq * 1000000),
+                starts_at   = datetime.datetime.now(datetime.timezone.utc),
+            )
+            #print(str(observation))
+            # After print
+            observation.data = base64.b64encode(data.encode("ascii")).decode()
 
-        LOG.info("Monitor pushing observation.data")
-        response = self.dstclient.create_observation(body=observation)
-        if not response:
-            LOG.info("Could not create new observation")
+            LOG.info("Monitor pushing observation.data")
+            response = self.dstclient.create_observation(body=observation)
+            if not response:
+                LOG.info("Could not create new observation")
+                pass
+            LOG.debug(response)
             pass
-        LOG.debug(response)
-        pass
+
+        webdir = "/local/www"
+        subdir = time.strftime("20%y-%m-%d", time.localtime())
+        os.makedirs(os.path.join(webdir, subdir), exist_ok=True)
+        ofname = "monitor:rf0-%d.csv" % (int(time.time()));
+        fofname = os.path.join(webdir, subdir, ofname)
+        with open(fofname, "w") as f:
+            f.write(data)
+            pass
+        os.system(f"gzip {fofname}")
 
     #
     # When reporting to an RDZinRDZ, we have to map the outer monitor ID to
