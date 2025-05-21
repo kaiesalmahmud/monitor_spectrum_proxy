@@ -24,6 +24,7 @@ MS        = "urn:publicid:IDN+emulab.net+authority+cm"
 INSTALL   = "/local/repository/install.sh"
 INSTALLZMS= "/local/repository/install-zmsclient.sh"
 COMMAND   = "sudo /local/repository/rdz-monitor.py --daemon --no-dynamic"
+INSTALLNGINX= "/local/repository/install-nginx.sh"
 PROBE     = "/local/repository/probe.pl  "
 RANGE     = "3350e6-3750e6"
 INTERVAL  = 10
@@ -197,6 +198,7 @@ for radioname in params.Radios:
 
     node.addService(pg.Execute(shell="sh", command=INSTALL))
     node.addService(pg.Execute(shell="sh", command=INSTALLZMS))
+    node.addService(pg.Execute(shell="sh", command=INSTALLNGINX))
     if not params.NoRun:
         node.addService(pg.Execute(shell="sh", command=probe))
         node.addService(pg.Execute(shell="sh", command="nohup python3 /local/repository/flask_server.py > /local/logs/server.log 2>&1 &"))  # kaies
