@@ -13,10 +13,11 @@ def update_range():
 
     f_min = center_freq - bandwidth / 2
     f_max = center_freq + bandwidth / 2
-    range_str = f"{f_min}e6-{f_max}e6"
+    range_str = f"{int(f_min)}e6-{int(f_max)}e6"
 
     # Save this range to a file or an environment variable
     with open("/local/repository/freq_range.txt", "w") as f:
         f.write(range_str)
 
     return jsonify({"RANGE": range_str})
+
