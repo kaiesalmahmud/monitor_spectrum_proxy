@@ -341,6 +341,7 @@ class Monitor:
             }
 
             # Replace with your Flask server IP
+            LOG.info(f"Sending data to Flask server at {self.rad_proxy_ip}:5000/update_range")
             response = requests.post(f"http://{self.rad_proxy_ip}:5000/update_range", json=payload)
             LOG.info(f"Server response: {response.status_code}, {response.text}")
 
