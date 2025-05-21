@@ -133,9 +133,12 @@ pc.verifyParameters()
 if params.Interval != "":
     COMMAND += " --interval " + str(params.Interval)
     pass
-COMMAND += " --dst-http " + params.DST
-COMMAND += " --zmc-http " + params.ZMC
-COMMAND += " --element-token " + params.Token
+if params.DST != "":
+    COMMAND += " --dst-http " + params.DST
+if params.ZMC != "":
+    COMMAND += " --zmc-http " + params.ZMC
+if params.Token != "":
+    COMMAND += " --element-token " + params.Token
 if params.Range != "":
     tokens = params.Range.split("-")
     COMMAND += " --min_freq " + str(tokens[0])
