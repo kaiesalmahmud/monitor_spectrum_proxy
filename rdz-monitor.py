@@ -159,7 +159,7 @@ class Monitor:
         #
         # This will raise an exception if it fails
         #
-        if zmcclient._base_url.find("rdz.powderwireless.net") < 0:
+        if zmcclient and zmcclient._base_url.find("rdz.powderwireless.net") < 0:
             self.mapOuterMonitor();
             pass
 
