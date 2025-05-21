@@ -1,5 +1,9 @@
 #!/bin/python
 
+# Note from Kaies:
+# Takes rad_proxy_ip as an argument and sends the center frequency and bandwidth to the Flask server running on that IP.
+# Process the CSV data to extract the center frequency and bandwidth from the monitor output.
+
 import time
 import uuid
 import os

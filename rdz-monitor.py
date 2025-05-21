@@ -1,5 +1,8 @@
 #!/bin/python
 
+# Note from Kaies:
+# Override range with data from the monitor
+
 import time
 import uuid
 import os
