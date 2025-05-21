@@ -207,7 +207,8 @@ class Monitor:
                 RANGE = "3350e6-3750e6"  # Fallback default
 
             # The monitor takes a min_freq-max_freq range argument.
-            range   = str(self.min_freq) + "-" + str(self.max_freq)
+            # range   = str(self.min_freq) + "-" + str(self.max_freq)
+            range   = RANGE
             command = MONITOR + " -o -n -g " + str(self.gain) + " "
             command = command + "-R " + range
             LOG.info(command)
