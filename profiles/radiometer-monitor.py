@@ -26,7 +26,7 @@ INSTALLZMS= "/local/repository/install-zmsclient.sh"
 COMMAND   = "sudo /local/repository/kaies-monitor.py --daemon --no-dynamic"
 INSTALLNGINX= "/local/repository/install-nginx.sh"
 PROBE     = "/local/repository/probe.pl  "
-RANGE     = "3350e6-3750e6"
+RANGE     = "3100e6-3700e6"
 INTERVAL  = 10
 
 # Default gains by RadioType.
