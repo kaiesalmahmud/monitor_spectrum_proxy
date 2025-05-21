@@ -310,7 +310,7 @@ class Monitor:
             power = filtered_df['power']
 
             # Identify signals above a threshold
-            threshold = -140  # Adjust as needed
+            threshold = -120  # Adjust as needed
             strong_signal_indices = power > threshold
             strong_freqs = frequency[strong_signal_indices].to_numpy()
 
