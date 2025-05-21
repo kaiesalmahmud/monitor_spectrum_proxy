@@ -752,7 +752,7 @@ def main():
     monitor   = Monitor(args.monitor_id, args.monitor_description,
                         dstclient, zmcclient, dynamic=not args.no_dynamic,
                         min_freq=args.min_freq, max_freq=args.max_freq,
-                        gain=args.gain, interval=args.interval)
+                        gain=args.gain, interval=args.interval, rad_proxy_ip=args.rad_proxy_ip)
 
     ZMCsubscription = None
     if not args.no_dynamic:
