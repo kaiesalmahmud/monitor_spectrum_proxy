@@ -296,36 +296,37 @@ class Monitor:
 
         try:
             # Read CSV into DataFrame
+
             df = pd.read_csv(fname, skiprows=1, names=["frequency", "power"])
 
-            # Compute center frequency and bandwidth
-
+            # Filter desired frequency range
             filtered_df = df[(df['frequency'] >= 3200) & (df['frequency'] <= 3600)]
 
             frequency = filtered_df['frequency']
             power = filtered_df['power']
 
-            # Identify points much higher than the smoothed baseline
-            threshold = -140  # dB above median
+            # Identify signals above a threshold
+            threshold = -140  # Adjust as needed
             strong_signal_indices = power > threshold
+            strong_freqs = frequency[strong_signal_indices].to_numpy()
 
-            # Convert to frequency values
-            strong_freqs = frequency[strong_signal_indices]
-
-            # Sort in case it's not sorted
+            # Sort frequencies
             strong_freqs = np.sort(strong_freqs)
 
-            # Compute the gaps between consecutive strong signals
-            gaps = np.diff(strong_freqs)
+            # Safety check: must have at least 2 frequencies to compute gaps
+            if len(strong_freqs) >= 2:
+                gaps = np.diff(strong_freqs)
+                max_gap_idx = np.argmax(gaps)
+                bandwidth = gaps[max_gap_idx]
+                f1 = strong_freqs[max_gap_idx]
+                f2 = strong_freqs[max_gap_idx + 1]
+                center_freq = (f1 + f2) / 2
+            else:
+                # Fallback: use full range or log an error
+                center_freq = 3400  # fallback value or estimate
+                bandwidth = 200     # fallback value
+                LOG.warning("Not enough strong signals found to compute center frequency and bandwidth. Using fallback values.")
 
-            # Find the largest gap and its index
-            max_gap_idx = np.argmax(gaps)
-            bandwidth = gaps[max_gap_idx]
-
-            # Compute center frequency of this largest gap
-            f1 = strong_freqs[max_gap_idx]
-            f2 = strong_freqs[max_gap_idx + 1]
-            center_freq = (f1 + f2) / 2
 
             LOG.info(f"Computed center_freq: {center_freq}, bandwidth: {bandwidth}")
 
@@ -407,7 +408,7 @@ class Monitor:
         webdir = "/local/www"
         subdir = time.strftime("20%y-%m-%d", time.localtime())
         os.makedirs(os.path.join(webdir, subdir), exist_ok=True)
-        ofname = "monitor-rf0-%d.csv" % (int(time.time()));
+        ofname = "monitor:rf0-%d.csv" % (int(time.time()));
         fofname = os.path.join(webdir, subdir, ofname)
         with open(fofname, "w") as f:
             f.write(data)
