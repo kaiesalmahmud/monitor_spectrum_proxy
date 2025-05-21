@@ -354,14 +354,14 @@ class Monitor:
             strong_signal_indices = power > threshold
             strong_freqs = frequency[strong_signal_indices].to_numpy()
 
-            # Sort frequencies
-            strong_freqs = np.sort(strong_freqs)
-
             # add lower and upper bounds to strong_freqs
             if 3200 not in strong_freqs:
                 strong_freqs = np.append(strong_freqs, 3200)
             if 3600 not in strong_freqs:
                 strong_freqs = np.append(strong_freqs, 3600)
+
+            # Sort frequencies
+            strong_freqs = np.sort(strong_freqs)
 
             # Safety check: must have at least 2 frequencies to compute gaps
             if len(strong_freqs) >= 2:
