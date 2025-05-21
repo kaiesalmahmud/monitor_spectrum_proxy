@@ -336,8 +336,8 @@ class Monitor:
 
             # Prepare and send data to Flask server
             payload = {
-                "center_frequency": int(center_freq * 1e6),  # Hz
-                "bandwidth": int(bandwidth * 1e6)            # Hz
+                "center_frequency": int(center_freq),  # Hz
+                "bandwidth": int(bandwidth)            # Hz
             }
 
             # Replace with your Flask server IP
