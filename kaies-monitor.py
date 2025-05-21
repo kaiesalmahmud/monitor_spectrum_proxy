@@ -153,7 +153,7 @@ class Monitor:
         self.dynamic     = dynamic
         self.lock        = asyncio.Lock()
         self._stop       = False
-        rad_proxy_ip = rad_proxy_ip
+        self.rad_proxy_ip = rad_proxy_ip
 
         #
         # Must map outer monitor to inner monitor for rdzinrdz.
